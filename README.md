@@ -27,6 +27,7 @@ To change channels, remove the installed plugins and their repository, then inst
 | --- | --- |
 | [M6Plus](plugins/M6Plus/README.md) | M6, W9, 6ter and Gulli replays with search, subtitles, Widevine and Chromecast |
 | [TF1Plus](plugins/TF1Plus/README.md) | TF1+, TMC, TFX, TF1 Series Films and LCI replays with search, account settings, Widevine and Chromecast |
+| [ARTE](plugins/ARTE/README.md) | ARTE documentaries, films, series and concerts with search and multilingual HLS playback |
 
 See each plugin's README for account setup and troubleshooting.
 
