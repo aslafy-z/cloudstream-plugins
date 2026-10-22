@@ -108,6 +108,8 @@ class TF1PlusProvider : MainAPI() {
         true
     }
 
-    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? =
-        videoInterceptors[extractorLink]
+    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor? {
+        TF1Diagnostics.record(TF1Diagnostics.Event.PLAYER_INITIALIZED)
+        return videoInterceptors[extractorLink]
+    }
 }
