@@ -17,6 +17,7 @@ https://raw.githubusercontent.com/aslafy-z/cloudstream-plugins/main/repo.json
 | Plugin | Version | Description |
 | --- | --- | --- |
 | [M6Plus](M6Plus/README.md) | 1 | M6, W9, 6ter and Gulli replays with search, subtitles, Widevine and Chromecast |
+| [TF1Plus](TF1Plus/README.md) | 1 | TF1+, TMC, TFX, TF1 Séries Films and LCI replays with search, account settings and Widevine |
 
 Each plugin's README contains its requirements, setup instructions, features and troubleshooting information.
 

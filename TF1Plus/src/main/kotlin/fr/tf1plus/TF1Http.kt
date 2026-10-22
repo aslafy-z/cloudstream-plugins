@@ -67,6 +67,10 @@ internal open class TF1Http {
         } finally { conn.disconnect() }
     }
 
+    fun clearSessionCookies() {
+        synchronized(cookies) { cookies.cookieStore.removeAll() }
+    }
+
     companion object {
         const val ROOT = "https://www.tf1.fr"
         const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
