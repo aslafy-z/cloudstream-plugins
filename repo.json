@@ -1,0 +1,8 @@
+{
+  "name": "aslafy-z CloudStream plugins",
+  "description": "Plugins for CloudStream, maintained by aslafy-z.",
+  "manifestVersion": 1,
+  "pluginLists": [
+    "https://github.com/aslafy-z/cloudstream-plugins/releases/latest/download/plugins.json"
+  ]
+}
