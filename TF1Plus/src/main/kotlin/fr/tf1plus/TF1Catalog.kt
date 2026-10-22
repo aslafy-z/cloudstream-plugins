@@ -61,7 +61,7 @@ internal class TF1Catalog(private val http: TF1Http) {
 
     internal fun httpGet(url: String): String = http.get(url, cacheMs = cacheMs)
 
-    fun categories(): List<TF1Category> {
+    fun categories(): List<TF1Category> = TF1Diagnostics.trace(TF1Diagnostics.Operation.CATEGORIES) {
         val data = graph("909c68c0", JSONObject())
         return data.keys().asSequence().mapNotNull { key -> data.optJSONObject(key) }
             .mapNotNull { item ->
@@ -70,7 +70,7 @@ internal class TF1Catalog(private val http: TF1Http) {
             }.toList()
     }
 
-    fun programmes(channel: String, page: Int, limit: Int = 60): List<TF1Programme> {
+    fun programmes(channel: String, page: Int, limit: Int = 60): List<TF1Programme> = TF1Diagnostics.trace(TF1Diagnostics.Operation.PROGRAMS) {
         val vars = JSONObject()
             .put("context", JSONObject().put("persona", "PERSONA_2").put("application", "WEB")
                 .put("device", "DESKTOP").put("os", "WINDOWS"))
@@ -81,21 +81,25 @@ internal class TF1Catalog(private val http: TF1Http) {
     }
 
     fun searchProgrammes(query: String): List<TF1Programme> =
-        TF1Mappings.programmes(graph("e78b188",
-            JSONObject().put("query", query).put("offset", 0).put("limit", 100))
-            .objectAt("searchPrograms")?.optJSONArray("items"))
+        TF1Diagnostics.trace(TF1Diagnostics.Operation.SEARCH_PROGRAMS) {
+            TF1Mappings.programmes(graph("e78b188",
+                JSONObject().put("query", query).put("offset", 0).put("limit", 100))
+                .objectAt("searchPrograms")?.optJSONArray("items"))
+        }
 
     fun searchVideos(query: String): List<TF1Video> =
-        TF1Mappings.videos(graph("b2dc9439",
-            JSONObject().put("query", query).put("offset", 0).put("limit", 100))
-            .objectAt("searchVideos")?.optJSONArray("items"))
+        TF1Diagnostics.trace(TF1Diagnostics.Operation.SEARCH_VIDEOS) {
+            TF1Mappings.videos(graph("b2dc9439",
+                JSONObject().put("query", query).put("offset", 0).put("limit", 100))
+                .objectAt("searchVideos")?.optJSONArray("items"))
+        }
 
-    fun programme(id: String): TF1Programme? {
+    fun programme(id: String): TF1Programme? = TF1Diagnostics.trace(TF1Diagnostics.Operation.PROGRAM) {
         val vars = JSONObject().put("programId", id)
         val url = TF1Http.query("https://smart-tv.tf1.fr/catalog/fr-fr/smarttv",
             mapOf("id" to "379fec96081ab1a2", "variables" to vars.toString()))
         val data = JSONObject(http.get(url, cacheMs = cacheMs))
-            .objectAt("data", "programById") ?: return null
+            .objectAt("data", "programById") ?: return@trace null
         val decor = data.optJSONObject("decoration")
         val poster = decor?.optJSONObject("image")?.optJSONArray("sourcesWithScales")
             ?.optJSONObject(0)?.stringOrNull("url")
@@ -104,7 +108,7 @@ internal class TF1Catalog(private val http: TF1Http) {
             poster, decor?.stringOrNull("description"))
     }
 
-    fun videos(slug: String, type: String = "REPLAY"): List<TF1Video> {
+    fun videos(slug: String, type: String = "REPLAY"): List<TF1Video> = TF1Diagnostics.trace(TF1Diagnostics.Operation.EPISODES) {
         val result = linkedMapOf<String, TF1Video>()
         for (page in 0 until 20) {
             val vars = JSONObject().put("programSlug", slug).put("offset", page)
