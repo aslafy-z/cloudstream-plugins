@@ -1,0 +1,39 @@
+name: Promote plugins to Stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Promote all latest Dev builds, or one plugin'
+        type: choice
+        options: [all-latest, one-plugin]
+        default: all-latest
+        required: true
+      plugin:
+        description: 'Plugin module name for one-plugin (for example M6Plus)'
+        type: string
+      release:
+        description: 'Optional exact plugin release; blank selects its latest Dev build'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plugin-release-publication
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify selected artifacts and promote without rebuilding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SCOPE: ${{ inputs.scope }}
+          PLUGIN: ${{ inputs.plugin }}
+          RELEASE: ${{ inputs.release }}
+        run: python3 scripts/releases.py promote --scope "$SCOPE" --plugin "$PLUGIN" --release "$RELEASE"

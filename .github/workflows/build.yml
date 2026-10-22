@@ -1,0 +1,71 @@
+name: Build and publish plugins
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: Rebuild all plugins even when sources are unchanged
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_BUILD_VERSION: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test release tooling
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Plan affected plugin releases
+        env:
+          REBUILD_PLUGINS: ${{ inputs.rebuild || false }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 scripts/releases.py plan --run "$GITHUB_RUN_ID" --version "$PLUGIN_BUILD_VERSION" --sha "$GITHUB_SHA"
+      - name: Test and build all plugins
+        run: ./gradlew --no-daemon testDebugUnitTest make makePluginsJson
+      - name: Package affected plugins
+        run: python3 scripts/releases.py package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugins
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: plugin-release-publication
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugins
+          path: dist
+      - name: Publish affected plugins and update Dev
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 scripts/releases.py publish
