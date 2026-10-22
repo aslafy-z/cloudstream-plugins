@@ -7,7 +7,7 @@
 Add this repository in CloudStream's extension settings:
 
 ```text
-https://raw.githubusercontent.com/aslafy-z/cloudstream-plugins/main/repo.json
+https://github.com/aslafy-z/cloudstream-plugins/releases/latest/download/repo.json
 ```
 
 [Releases](https://github.com/aslafy-z/cloudstream-plugins/releases) include the `.cs3` plugins, `plugins.json` catalogue, `repo.json`, and SHA-256 checksums.
