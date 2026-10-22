@@ -64,6 +64,16 @@ To promote tested builds, open **Actions → Promote plugins to Stable → Run w
 Promotion verifies the selected files and updates Stable without rebuilding.
 To roll back, revert the plugin source and publish a new build; CloudStream does not automatically downgrade.
 
+## Disclaimer
+
+This is an independent, unofficial project. It is not affiliated with or endorsed by the broadcasters, streaming services or CloudStream developers. Service names and trademarks belong to their respective owners.
+
+This repository distributes plugin code and does not host video content. Streams are supplied by the respective services or their media hosts. Use the plugins only to access content you are authorized to view, subject to applicable law, service terms, account requirements and geographic restrictions. The software license does not grant rights to third-party content.
+
+For concerns about a hosted video, contact the service providing it. Concerns about code or other material in this repository can be reported through the [repository issues](https://github.com/aslafy-z/cloudstream-plugins/issues).
+
+The software is provided as is, subject to the warranty disclaimer and limitation of liability in the [MIT License](LICENSE).
+
 ## Credits
 
 Most of the API research and replay integration work behind these plugins comes from [Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore) and its contributors. Their connectors are the foundation for the catalogue, authentication and playback flows implemented here in Kotlin for CloudStream. Each plugin's README links to its corresponding upstream implementation.
