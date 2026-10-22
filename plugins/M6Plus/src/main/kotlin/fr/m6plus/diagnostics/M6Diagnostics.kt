@@ -101,7 +101,7 @@ internal object M6Diagnostics {
     }
 
     fun snapshot(): String = buffer.snapshot()
-    fun report(): String = "M6Plus v1 - plugin diagnostics\n" + snapshot() + "\n"
+    fun report(): String = "M6Plus - plugin diagnostics\n" + snapshot() + "\n"
     @Synchronized fun clear() { buffer.clear(); stage = Event.SESSION }
 }
 

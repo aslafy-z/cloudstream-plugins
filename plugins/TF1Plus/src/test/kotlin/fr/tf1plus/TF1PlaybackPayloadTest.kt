@@ -34,4 +34,18 @@ class TF1PlaybackPayloadTest {
         TF1PlaybackPayload.parse(JSONObject("""{"delivery":{
             "code":200,"url":"http://example.org/untrusted.mpd"}}"""), "v")
     }
+    @Test fun selectsWidevineAfterPlayReady() {
+        val stream = TF1PlaybackPayload.parse(JSONObject("""{"delivery":{
+            "format":"dash","url":"https://example.org/video.mpd",
+            "drms":[{"name":"playready","url":"https://dgmp.prod.p.tf1.fr/license"},
+                    {"name":"widevine","url":"https://dgmw.prod.p.tf1.fr/license"}]}}"""), "v")
+        assertEquals("https://dgmw.prod.p.tf1.fr/license", stream.licenseUrl)
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun refusesPlayReadyOnlyDelivery() {
+        TF1PlaybackPayload.parse(JSONObject("""{"delivery":{
+            "url":"https://example.org/video.mpd",
+            "drms":[{"name":"playready","url":"https://dgmp.prod.p.tf1.fr/license"}]}}"""), "v")
+    }
 }

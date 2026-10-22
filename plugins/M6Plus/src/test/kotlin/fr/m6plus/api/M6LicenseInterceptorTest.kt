@@ -60,4 +60,9 @@ class M6LicenseInterceptorTest {
             assertEquals(0, other.requestCount)
         }
     }
+    @Test fun `different license query does not receive the token`() {
+        server.enqueue(MockResponse().setBody("other"))
+        client.newCall(Request.Builder().url(server.url("/license?other=1")).build()).execute().close()
+        assertNull(server.takeRequest().getHeader("x-dt-auth-token"))
+    }
 }

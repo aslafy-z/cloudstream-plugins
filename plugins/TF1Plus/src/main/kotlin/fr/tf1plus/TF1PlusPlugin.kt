@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
+import com.lagradost.cloudstream3.ui.player.RepoLinkGenerator
 
 internal object TF1Runtime {
     private val http = TF1Http()
@@ -17,6 +18,10 @@ internal object TF1Runtime {
         TF1Diagnostics.record(TF1Diagnostics.Event.PLUGIN_LOADED)
         auth = TF1Auth(http, TF1EncryptedStore(context.applicationContext))
         playback = TF1Playback(http, auth)
+    }
+
+    fun clearPlaybackCache() {
+        synchronized(RepoLinkGenerator.cache) { RepoLinkGenerator.cache.keys.removeAll { it.first == "TF1+" } }
     }
 
     fun close() {

@@ -9,7 +9,6 @@ import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManager
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.CastMediaControlIntent
-import com.lagradost.cloudstream3.ui.player.RepoLinkGenerator
 import fr.m6plus.api.M6PlaybackClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,7 +55,7 @@ internal class M6CastManager(private val context: Context, private val playback:
 
     private fun clearLinks() {
         // Only this provider's entries are invalidated; other plugins keep their cache.
-        synchronized(RepoLinkGenerator.cache) { RepoLinkGenerator.cache.keys.removeAll { it.first == "M6+" } }
+        fr.m6plus.M6Runtime.clearPlaybackCache()
     }
 
     suspend fun link(videoId: String, manifestUrl: String): String {
@@ -79,10 +78,10 @@ internal class M6CastManager(private val context: Context, private val playback:
             M6Diagnostics.record(M6Diagnostics.Event.FETCH)
             val (xml, origin) = http.newCall(Request.Builder().url(manifestUrl).build()).execute().use { response ->
                 check(response.isSuccessful) { "The M6+ manifest is unavailable." }
-                val body = response.body ?: throw IllegalStateException("Le manifeste M6+ est vide.")
+                val body = response.body ?: throw IllegalStateException("The M6+ manifest is empty.")
                 // Manifests are small; refuse unexpectedly large responses before allocating their contents.
                 val source = body.source()
-                check(!source.request(1_048_577)) { "Le manifeste M6+ est trop volumineux." }
+                check(!source.request(1_048_577)) { "The M6+ manifest is too large." }
                 source.readUtf8() to response.request.url.toString()
             }
             synchronized(this@M6CastManager) {

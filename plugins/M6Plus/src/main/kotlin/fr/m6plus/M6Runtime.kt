@@ -3,6 +3,7 @@ package fr.m6plus
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.lagradost.cloudstream3.ui.player.RepoLinkGenerator
 import fr.m6plus.api.M6ApiClient
 import fr.m6plus.api.M6AuthClient
 import fr.m6plus.api.M6CatalogClient
@@ -37,7 +38,12 @@ internal object M6Runtime {
         }
     }
 
+    fun clearPlaybackCache() {
+        synchronized(RepoLinkGenerator.cache) { RepoLinkGenerator.cache.keys.removeAll { it.first == "M6+" } }
+    }
+
     fun stopCast() {
+        clearPlaybackCache()
         if (castManager.isInitialized()) castManager.value.stop()
         if (nativeManager.isInitialized()) nativeManager.value.stop()
     }

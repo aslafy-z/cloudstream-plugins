@@ -45,7 +45,7 @@ internal object M6CastManifest {
             })
             count++
         }
-        require(count > 0) { "Le manifeste M6+ ne contient pas de piste Widevine." }
+        require(count > 0) { "The M6+ manifest contains no Widevine track." }
         val output = StringWriter()
         TransformerFactory.newInstance().newTransformer().apply { setOutputProperty(OutputKeys.ENCODING, "UTF-8") }
             .transform(DOMSource(document), StreamResult(output))

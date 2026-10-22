@@ -53,6 +53,7 @@ internal object TF1Diagnostics {
     fun failure(operation: Operation, error: Exception) {
         val detail = when (error) {
             is TF1HttpException -> " (HTTP ${error.status})"
+            is TF1DeliveryException -> " (delivery ${error.code})"
             is TF1AuthException -> " (Gigya error ${error.code})"
             is IOException -> " (network)"
             is JSONException -> " (invalid JSON)"

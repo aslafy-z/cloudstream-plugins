@@ -35,7 +35,8 @@ internal class TF1EncryptedStore(context: Context) : TF1CredentialsStore {
 
     override fun save(credentials: TF1Credentials) {
         val serialized = JSONObject().put("email", credentials.email)
-            .put("password", credentials.password).toString().toByteArray(Charsets.UTF_8)
+            .put("password", credentials.password).put("token", credentials.token)
+            .put("expiresAt", credentials.expiresAt).toString().toByteArray(Charsets.UTF_8)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val encrypted = cipher.iv + cipher.doFinal(serialized)
@@ -52,7 +53,8 @@ internal class TF1EncryptedStore(context: Context) : TF1CredentialsStore {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
             val json = JSONObject(String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8))
-            TF1Credentials(json.getString("email"), json.getString("password"))
+            TF1Credentials(json.getString("email"), json.getString("password"),
+                json.stringOrNull("token"), json.optLong("expiresAt"))
         } catch (_: Exception) {
             TF1Diagnostics.record(TF1Diagnostics.Event.STORAGE_FAILED)
             null // Android Keystore keys cannot be restored from device backups.
@@ -125,7 +127,7 @@ class TF1SettingsFragment : DialogFragment() {
             connect.setOnClickListener {
                 val address = email.text.toString().trim()
                 val secret = password.text.toString()
-                if (address.isBlank() || secret.isBlank()) {
+                if (address.isBlank() || secret.isEmpty()) {
                     status.text = "Enter your email address and password."
                     return@setOnClickListener
                 }
@@ -137,7 +139,10 @@ class TF1SettingsFragment : DialogFragment() {
                 Thread {
                     val result = try {
                         TF1Runtime.auth.signIn(address, secret)
+                        TF1Runtime.clearPlaybackCache()
                         "Signed in to TF1+."
+                    } catch (error: TF1AuthException) {
+                        error.message ?: "TF1+ sign-in failed."
                     } catch (_: Exception) {
                         "TF1+ sign-in failed. Check your credentials and network."
                     }
@@ -152,6 +157,7 @@ class TF1SettingsFragment : DialogFragment() {
             }
             disconnect.setOnClickListener {
                 TF1Runtime.auth.signOut()
+                TF1Runtime.clearPlaybackCache()
                 email.text.clear()
                 password.text.clear()
                 status.text = "Signed out of TF1+."

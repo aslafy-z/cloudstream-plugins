@@ -42,6 +42,7 @@ internal open class TF1Http {
     private fun request(url: String, method: String, headers: Map<String, String>,
                         payload: ByteArray? = null): String {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = false
             requestMethod = method
             connectTimeout = 12_000
             readTimeout = 25_000

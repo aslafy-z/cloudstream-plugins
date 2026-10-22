@@ -79,6 +79,7 @@ class M6SettingsFragment : DialogFragment() {
                 Thread {
                     val message = try {
                         M6Runtime.sessions.login(login, secret)
+                        M6Runtime.clearPlaybackCache()
                         "Signed in to M6+."
                     } catch (_: Exception) { "Sign-in failed. Check your credentials and internet connection." }
                     activity.runOnUiThread {

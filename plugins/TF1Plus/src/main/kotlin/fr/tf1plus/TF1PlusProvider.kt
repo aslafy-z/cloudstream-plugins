@@ -20,7 +20,7 @@ class TF1PlusProvider : MainAPI() {
     override val mainPage = mainPageOf(
         "tf1" to "TF1", "tmc" to "TMC", "tfx" to "TFX",
         "tf1-series-films" to "TF1 Séries Films", "lci" to "LCI",
-        "all" to "Tous les programmes"
+        "all" to "All programmes"
     )
     private val videoInterceptors =
         Collections.synchronizedMap(WeakHashMap<ExtractorLink, Interceptor>())
@@ -48,7 +48,9 @@ class TF1PlusProvider : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
         val programmes = TF1Runtime.catalog.searchProgrammes(query)
-        val videos = TF1Runtime.catalog.searchVideos(query)
+        val videos = try { TF1Runtime.catalog.searchVideos(query) }
+        catch (error: CancellationException) { throw error }
+        catch (error: Exception) { if (programmes.isEmpty()) throw error else emptyList() }
         programmes.distinctBy { it.id }.map(::programmeResult) +
             videos.distinctBy { it.id }.map(::videoResult)
     }
@@ -74,7 +76,7 @@ class TF1PlusProvider : MainAPI() {
         }
         if (episodes.isEmpty()) {
             TF1Diagnostics.record(TF1Diagnostics.Event.NO_REPLAYS)
-            throw ErrorLoadingException("Aucun replay disponible pour ce programme TF1+.")
+            throw ErrorLoadingException("No replays are available for this TF1+ programme.")
         }
         newTvSeriesLoadResponse(programme?.title ?: slug.replace('-', ' '),
             url, TvType.TvSeries, episodes) {
@@ -88,14 +90,17 @@ class TF1PlusProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         TF1Diagnostics.record(TF1Diagnostics.Event.PLAYBACK_REQUESTED)
+        if (!TF1Runtime.auth.isConfigured()) throw ErrorLoadingException("Sign in to TF1+ in the plugin settings.")
         val stream = try {
             TF1Diagnostics.trace(TF1Diagnostics.Operation.PLAYBACK) {
                 TF1Runtime.playback.resolve(data)
             }
         } catch (error: CancellationException) {
             throw error
+        } catch (error: TF1AuthException) {
+            throw ErrorLoadingException(error.message ?: "TF1+ sign-in failed.")
         } catch (_: Exception) {
-            throw ErrorLoadingException("Lecture TF1+ indisponible. Voir Plugin diagnostics dans les paramètres.")
+            throw ErrorLoadingException("TF1+ playback unavailable. Open Plugin diagnostics in the settings.")
         }
         TF1Diagnostics.record(TF1Diagnostics.Event.MANIFEST_READY)
         val drm = newDrmExtractorLink(name, "TF1+ · Widevine", stream.manifest,
@@ -104,7 +109,7 @@ class TF1PlusProvider : MainAPI() {
         }
         // Install even without custom DRM headers so license requests remain observable.
         videoInterceptors[drm] = TF1LicenseInterceptor(stream.licenseUrl, stream.licenseHeaders)
-        stream.subtitles.forEach { subtitleCallback(newSubtitleFile("Français", it)) }
+        stream.subtitles.forEach { subtitleCallback(newSubtitleFile("French", it)) }
         callback(drm)
         TF1Diagnostics.record(TF1Diagnostics.Event.LINK_EMITTED)
         true

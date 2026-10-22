@@ -35,4 +35,15 @@ class TF1MappingsTest {
         assertEquals("Test", videos[0].description)
         assertNull(videos[1].season)
     }
+    @Test fun prefersOfficialNumbersAndStillImagesOverPreviewVideos() {
+        val videos = TF1Mappings.videos(JSONArray("""[{
+            "id":"v1","season":4,"episode":8,
+            "decoration":{"label":"Season 2 episode 3","images":[
+                {"type":"PREVIEW","sources":[{"url":"https://example.org/preview.mp4"}]},
+                {"type":"THUMBNAIL_LARGE","sources":[{"url":"https://example.org/image.avif"},
+                    {"url":"https://example.org/image.jpg"}]}]}}]"""))
+        assertEquals(4, videos.single().season)
+        assertEquals(8, videos.single().number)
+        assertEquals("https://example.org/image.jpg", videos.single().poster)
+    }
 }

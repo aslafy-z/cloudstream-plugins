@@ -5,7 +5,7 @@ Requires Android 6 (API 23) or newer and a recent CloudStream pre-release. Open 
 - Browse by channel and category, or search with programme posters and a catalogue fallback.
 - Episodes are sorted by season, episode and part, with extracts after full programmes. Videos without episode numbers use their broadcast date, then publication date.
 - Series retain their official episode numbers. Split programmes use a separate number for each video within a season; titles retain the original episode and part numbers.
-- Credentials and sessions are encrypted using Android Keystore. Expired sessions are renewed automatically.
+- Credentials and sessions are encrypted using Android Keystore. Expired sessions are renewed automatically. Signing in or out clears this plugin's cached playback links.
 - DASH playback uses the device's official Widevine license exchange and supports VTT subtitles. The plugin does not extract encryption keys.
 - Catalogue metadata is cached in memory for 10 minutes; CloudStream manages the image cache.
 

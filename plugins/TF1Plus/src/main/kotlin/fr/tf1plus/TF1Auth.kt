@@ -1,15 +1,26 @@
 package fr.tf1plus
 
+import okio.ByteString.Companion.decodeBase64
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal data class TF1Credentials(val email: String, val password: String)
+internal data class TF1Credentials(val email: String, val password: String,
+    val token: String? = null, val expiresAt: Long = 0)
 internal data class TF1Identity(val uid: String, val signature: String, val timestamp: Long)
-internal class TF1AuthException(val code: Int) : IllegalStateException("TF1+ Gigya error ($code)")
+internal class TF1AuthException(val code: Int) : IllegalStateException(when (code) {
+    403042 -> "TF1+ rejected the email address or password."
+    206001 -> "Complete your account registration on tf1.fr before signing in."
+    else -> "TF1+ sign-in failed (code $code). Check your account on tf1.fr."
+})
 
 internal object TF1AuthPayload {
+    fun check(json: JSONObject) {
+        val code = json.optInt("errorCode", 0)
+        if (code != 0) throw TF1AuthException(code)
+    }
+
     fun parseLogin(json: JSONObject): TF1Identity {
-        if (json.optInt("errorCode", 0) != 0) throw TF1AuthException(json.optInt("errorCode"))
+        check(json)
         val user = json.optJSONObject("userInfo") ?: json
         return TF1Identity(
             user.stringOrNull("UID") ?: throw IllegalStateException("Missing TF1+ user identifier."),
@@ -18,42 +29,49 @@ internal object TF1AuthPayload {
                 ?: throw IllegalStateException("Missing TF1+ signature timestamp.")
         )
     }
+
+    fun exchange(identity: TF1Identity): JSONObject = JSONObject()
+        .put("UID", identity.uid).put("signature", identity.signature).put("timestamp", identity.timestamp)
+        .put("consent_ids", JSONArray())
+
+    fun expiry(token: String, now: Long): Long = runCatching {
+        val claims = token.split('.')[1].decodeBase64()?.utf8() ?: return@runCatching null
+        JSONObject(claims).optLong("exp").takeIf { it > 0 }?.times(1000)
+    }.getOrNull() ?: (now + 15 * 60_000L)
 }
 
-internal class TF1Auth(private val http: TF1Http, private val store: TF1CredentialsStore) {
-    private var cachedToken: String? = null
-    private var tokenExpiryMs: Long = 0
+internal class TF1Auth(private val http: TF1Http, private val store: TF1CredentialsStore,
+    private val now: () -> Long = System::currentTimeMillis) {
+    private var current: TF1Credentials? = null
 
     @Synchronized fun isConfigured(): Boolean = store.read() != null
 
     @Synchronized fun signIn(email: String, password: String) = TF1Diagnostics.trace(TF1Diagnostics.Operation.LOGIN) {
-        val value = getNewToken(TF1Credentials(email.trim(), password))
-        store.save(TF1Credentials(email.trim(), password))
-        cachedToken = value
-        tokenExpiryMs = System.currentTimeMillis() + 15 * 60_000L
+        val account = authenticate(TF1Credentials(email.trim(), password))
+        store.save(account)
+        current = account
     }
 
-    @Synchronized fun token(refresh: Boolean = false): String =
-        TF1Diagnostics.trace(TF1Diagnostics.Operation.SESSION) {
-            if (!refresh && System.currentTimeMillis() < tokenExpiryMs) cachedToken?.let {
-                TF1Diagnostics.record(TF1Diagnostics.Event.TOKEN_REUSED)
-                return@trace it
-            }
-            val credentials = store.read() ?: run {
-                TF1Diagnostics.record(TF1Diagnostics.Event.ACCOUNT_MISSING)
-                throw IllegalStateException("Sign in to TF1+ in plugin settings.")
-            }
-            TF1Diagnostics.trace(TF1Diagnostics.Operation.REFRESH) {
-                getNewToken(credentials).also {
-                    cachedToken = it
-                    tokenExpiryMs = System.currentTimeMillis() + 15 * 60_000L
-                }
-            }
+    @Synchronized fun token(refresh: Boolean = false): String = TF1Diagnostics.trace(TF1Diagnostics.Operation.SESSION) {
+        val account = current ?: store.read() ?: run {
+            TF1Diagnostics.record(TF1Diagnostics.Event.ACCOUNT_MISSING)
+            throw IllegalStateException("Sign in to TF1+ in the plugin settings.")
         }
+        if (!refresh && account.token != null && account.expiresAt > now() + 60_000L) {
+            current = account
+            TF1Diagnostics.record(TF1Diagnostics.Event.TOKEN_REUSED)
+            return@trace account.token
+        }
+        TF1Diagnostics.trace(TF1Diagnostics.Operation.REFRESH) {
+            val renewed = authenticate(account)
+            store.save(renewed)
+            current = renewed
+            checkNotNull(renewed.token)
+        }
+    }
 
     @Synchronized fun clearMemory() {
-        cachedToken = null
-        tokenExpiryMs = 0
+        current = null
         http.clearSessionCookies()
     }
 
@@ -62,48 +80,31 @@ internal class TF1Auth(private val http: TF1Http, private val store: TF1Credenti
         store.clear()
     }
 
-    private fun getNewToken(credentials: TF1Credentials): String {
+    private fun authenticate(credentials: TF1Credentials): TF1Credentials {
         TF1Diagnostics.trace(TF1Diagnostics.Operation.BOOTSTRAP) {
-            http.get(TF1Http.query("https://compte.tf1.fr/accounts.webSdkBootstrap", mapOf(
-                "apiKey" to GIGYA_KEY, "pageURL" to TF1Http.ROOT, "sd" to "js_latest",
-                "sdkBuild" to "13987", "format" to "json")))
-        }
-        val response = TF1Diagnostics.trace(TF1Diagnostics.Operation.GIGYA) {
-            http.postForm("https://compte.tf1.fr/accounts.login", mapOf(
-            "loginID" to credentials.email,
-            "password" to credentials.password,
-            "sessionExpiration" to "31536000",
-            "targetEnv" to "jssdk",
-            "include" to "identities-all,data,profile,preferences,",
-            "includeUserInfo" to "true",
-            "loginMode" to "standard",
-            "lang" to "fr",
-            "APIKey" to GIGYA_KEY,
-            "sdk" to "js_latest",
-            "authMode" to "cookie",
-            "pageURL" to TF1Http.ROOT,
-            "sdkBuild" to "13987",
-            "format" to "json"
-        ))
+            TF1AuthPayload.check(JSONObject(http.get(TF1Http.query("https://compte.tf1.fr/accounts.webSdkBootstrap", mapOf(
+                "apiKey" to GIGYA_KEY, "pageURL" to TF1Http.ROOT, "sdk" to "js_latest",
+                "sdkBuild" to "13987", "format" to "json")))))
         }
         val identity = TF1Diagnostics.trace(TF1Diagnostics.Operation.GIGYA) {
-            TF1AuthPayload.parseLogin(JSONObject(response))
+            TF1AuthPayload.parseLogin(JSONObject(http.postForm("https://compte.tf1.fr/accounts.login", mapOf(
+                "loginID" to credentials.email, "password" to credentials.password,
+                "sessionExpiration" to "31536000", "targetEnv" to "jssdk",
+                "include" to "identities-all,data,profile,preferences", "includeUserInfo" to "true",
+                "loginMode" to "standard", "lang" to "fr", "APIKey" to GIGYA_KEY,
+                "sdk" to "js_latest", "authMode" to "cookie", "pageURL" to TF1Http.ROOT,
+                "sdkBuild" to "13987", "format" to "json"
+            ))))
         }
-        val consent = JSONArray()
-        listOf(1, 2, 3, 4, 10001, 10003, 10005, 10007, 10013, 10015, 10017,
-            10019, 10009, 10011, 13002, 13001, 10004, 10014, 10016, 10018,
-            10020, 10010, 10012, 10006, 10008).forEach { consent.put(it.toString()) }
         val token = TF1Diagnostics.trace(TF1Diagnostics.Operation.TOKEN) {
-            JSONObject(http.postJson("https://www.tf1.fr/token/gigya/web",
-            JSONObject().put("uid", identity.uid).put("signature", identity.signature)
-                .put("timestamp", identity.timestamp).put("consent_ids", consent)))
-            .stringOrNull("token") ?: throw IllegalStateException("TF1+ login did not return a playback token.")
+            JSONObject(http.postJson("${TF1Http.ROOT}/token/gigya/web", TF1AuthPayload.exchange(identity)))
+                .stringOrNull("token") ?: throw IllegalStateException("TF1+ login did not return a playback token.")
         }
-        return token
+        return credentials.copy(token = token, expiresAt = TF1AuthPayload.expiry(token, now()))
     }
 
     companion object {
-        // Public Gigya WEB client identifier (not a credential).
+        // Public client identifier advertised by TF1's web login page.
         private const val GIGYA_KEY = "3_hWgJdARhz_7l1oOp3a8BDLoR9cuWZpUaKG4aqF7gum9_iK3uTZ2VlDBl8ANf8FVk"
     }
 }

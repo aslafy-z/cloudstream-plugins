@@ -14,9 +14,21 @@ internal data class TF1Video(
 internal data class TF1Category(val id: String, val title: String)
 
 internal object TF1Mappings {
-    private fun image(json: JSONObject?, key: String): String? =
-        json?.optJSONObject(key)?.optJSONArray("sources")?.optJSONObject(0)?.stringOrNull("url")
-            ?: json?.optJSONObject(key)?.optJSONArray("sourcesWithScales")?.optJSONObject(0)?.stringOrNull("url")
+    fun image(json: JSONObject?, key: String): String? = imageSources(json?.optJSONObject(key))
+
+    private fun imageSources(image: JSONObject?): String? =
+        (image?.optJSONArray("sources")?.jsonObjects().orEmpty() +
+            image?.optJSONArray("sourcesWithScales")?.jsonObjects().orEmpty())
+            .mapNotNull { it.stringOrNull("url") }
+            .filter { it.startsWith("https://") && !it.substringBefore('?').endsWith(".mp4", true) }
+            .sortedBy { url ->
+                val path = url.substringBefore('?').lowercase()
+                when {
+                    path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png") -> 0
+                    path.endsWith(".avif") -> 2
+                    else -> 1
+                }
+            }.firstOrNull()
 
     fun programmes(array: JSONArray?): List<TF1Programme> = array?.jsonObjects().orEmpty().mapNotNull { item ->
         val id = item.stringOrNull("id") ?: return@mapNotNull null
@@ -34,12 +46,12 @@ internal object TF1Mappings {
         val decor = video.optJSONObject("decoration")
         val title = decor?.stringOrNull("label") ?: return@mapNotNull null
         val images = decor?.optJSONArray("images")
-        val poster = image(item, "image") ?: images?.optJSONObject(1)?.optJSONArray("sources")
-            ?.optJSONObject(0)?.stringOrNull("url") ?: images?.optJSONObject(0)
-            ?.optJSONArray("sources")?.optJSONObject(0)?.stringOrNull("url")
-        val season = Regex("(?i)(?:saison|season|s)\\s*[.: -]?\\s*(\\d+)").find(title)
+        val poster = image(item, "image") ?: images?.jsonObjects().orEmpty()
+            .sortedBy { if (it.stringOrNull("type") == "THUMBNAIL_LARGE") 0 else 1 }
+            .firstNotNullOfOrNull(::imageSources)
+        val season = video.optInt("season").takeIf { it > 0 } ?: Regex("(?i)(?:saison|season|s)\\s*[.: -]?\\s*(\\d+)").find(title)
             ?.groupValues?.getOrNull(1)?.toIntOrNull()
-        val episode = Regex("(?i)(?:épisode|episode|ep|e)\\s*[.: -]?\\s*(\\d+)").find(title)
+        val episode = video.optInt("episode").takeIf { it > 0 } ?: Regex("(?i)(?:épisode|episode|ep|e)\\s*[.: -]?\\s*(\\d+)").find(title)
             ?.groupValues?.getOrNull(1)?.toIntOrNull()
         TF1Video(id, title, poster, decor?.stringOrNull("summary") ?: decor?.stringOrNull("description"),
             season, episode)
@@ -53,7 +65,7 @@ internal class TF1Catalog(private val http: TF1Http) {
     private fun graph(id: String, vars: JSONObject): JSONObject {
         val url = TF1Http.query(graphql, mapOf("id" to id, "variables" to vars.toString()))
         val response = JSONObject(http.get(url, cacheMs = cacheMs))
-        if ((response.optJSONArray("errors")?.length() ?: 0) > 0) {
+        if (response.optJSONObject("data") == null && (response.optJSONArray("errors")?.length() ?: 0) > 0) {
             throw IllegalStateException("TF1+ catalogue query rejected (persisted query may have changed).")
         }
         return response.optJSONObject("data") ?: throw IllegalStateException("Invalid TF1+ catalogue response.")
@@ -101,8 +113,7 @@ internal class TF1Catalog(private val http: TF1Http) {
         val data = JSONObject(http.get(url, cacheMs = cacheMs))
             .objectAt("data", "programById") ?: return@trace null
         val decor = data.optJSONObject("decoration")
-        val poster = decor?.optJSONObject("image")?.optJSONArray("sourcesWithScales")
-            ?.optJSONObject(0)?.stringOrNull("url")
+        val poster = TF1Mappings.image(decor, "image")
         return@trace TF1Programme(id, data.stringOrNull("slug") ?: "",
             data.stringOrNull("name") ?: decor?.stringOrNull("label") ?: "TF1+",
             poster, decor?.stringOrNull("description"))
@@ -110,15 +121,20 @@ internal class TF1Catalog(private val http: TF1Http) {
 
     fun videos(slug: String, type: String = "REPLAY"): List<TF1Video> = TF1Diagnostics.trace(TF1Diagnostics.Operation.EPISODES) {
         val result = linkedMapOf<String, TF1Video>()
-        for (page in 0 until 20) {
+        var page = 0
+        while (true) {
             val vars = JSONObject().put("programSlug", slug).put("offset", page)
                 .put("limit", 20).put("sort", JSONObject().put("type", "DATE").put("order", "DESC"))
                 .put("types", JSONArray().put(type))
-            val items = TF1Mappings.videos(graph("a6f9cf0e", vars)
-                .objectAt("programBySlug", "videos")?.optJSONArray("items"))
+            val connection = graph("a6f9cf0e", vars).objectAt("programBySlug", "videos")
+            val raw = connection?.optJSONArray("items")
+            val items = TF1Mappings.videos(raw)
             val before = result.size
             items.forEach { result[it.id] = it }
-            if (items.size < 20 || result.size == before) break
+            if ((raw?.length() ?: 0) < 20 || result.size >= (connection?.optInt("total", Int.MAX_VALUE) ?: Int.MAX_VALUE)) break
+            check(result.size > before) { "TF1+ repeated a replay page." }
+            page++
+            check(page < 500) { "TF1+ replay catalogue is too large to load." }
         }
         return@trace result.values.toList()
     }
