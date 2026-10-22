@@ -2,6 +2,7 @@ package fr.tf1plus
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
@@ -91,8 +92,10 @@ class TF1PlusProvider : MainAPI() {
             TF1Diagnostics.trace(TF1Diagnostics.Operation.PLAYBACK) {
                 TF1Runtime.playback.resolve(data)
             }
-        } catch (error: Exception) {
-            throw ErrorLoadingException("Lecture TF1+ indisponible : ${error.message ?: "erreur réseau"}")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            throw ErrorLoadingException("Lecture TF1+ indisponible. Voir Plugin diagnostics dans les paramètres.")
         }
         TF1Diagnostics.record(TF1Diagnostics.Event.MANIFEST_READY)
         val drm = newDrmExtractorLink(name, "TF1+ · Widevine", stream.manifest,
