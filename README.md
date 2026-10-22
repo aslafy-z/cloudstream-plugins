@@ -33,7 +33,8 @@ See each plugin's README for account setup and troubleshooting.
 ## Releases
 
 Plugins are released independently with tags such as `M6Plus-v2026.10.22.37`.
-Each release includes its `.cs3`, build metadata and checksums.
+Each plugin release includes its `.cs3`, build metadata and checksums.
+The fixed `catalog-dev` and `catalog-stable` releases each contain `repo.json` and `plugins.json`.
 
 To promote tested builds, open **Actions → Promote plugins to Stable → Run workflow** on `main`:
 

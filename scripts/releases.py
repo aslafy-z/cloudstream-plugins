@@ -100,30 +100,21 @@ def read_channel(channel):
         return []
     repo = json.loads(asset(tag, "repo.json"))
     links = repo["pluginLists"]
-    prefix = asset_url(tag, "plugins-")
-    if len(links) != 1 or not links[0].startswith(prefix):
-        raise ValueError("Catalogue does not reference an immutable snapshot")
-    filename = links[0].rsplit("/", 1)[1]
-    if not re.fullmatch(r"plugins-[a-f0-9]{64}\.json", filename):
-        raise ValueError("Invalid catalogue snapshot name")
-    data = asset(tag, filename)
-    if filename != f"plugins-{sha256(data)}.json":
-        raise ValueError("Catalogue snapshot checksum mismatch")
-    return validate_entries(json.loads(data))
+    if links != [asset_url(tag, "plugins.json")]:
+        raise ValueError("Catalogue must reference this channel's plugins.json")
+    return validate_entries(json.loads(asset(tag, "plugins.json")))
 
 
 def write_channel(channel, entries, sha):
-    """Publish immutable snapshot first; repo.json is the final channel switch."""
+    """Publish one plugin list per channel, then its repository descriptor."""
     entries = sorted(validate_entries(entries), key=lambda item: item["internalName"])
     tag = CHANNELS[channel]
     data = encoded(entries)
-    filename = f"plugins-{sha256(data)}.json"
     repo = {"name": f"aslafy-z CloudStream plugins - {channel.title()}",
         "description": "Development builds." if channel == "dev" else "Validated plugin builds.",
-        "manifestVersion": 1, "pluginLists": [asset_url(tag, filename)]}
+        "manifestVersion": 1, "pluginLists": [asset_url(tag, "plugins.json")]}
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
-        (directory / filename).write_bytes(data)
         (directory / "plugins.json").write_bytes(data)
         write_json(directory / "repo.json", repo)
         info = release_info(tag)
@@ -133,9 +124,6 @@ def write_channel(channel, entries, sha):
             args += ["--prerelease", "--latest=false"] if channel == "dev" else ["--latest"]
             command(*args)
         else:
-            names = {a["name"] for a in info["assets"]}
-            if filename not in names:
-                command("gh", "release", "upload", tag, str(directory / filename), "--repo", repository())
             command("gh", "release", "upload", tag, str(directory / "plugins.json"), "--repo", repository(), "--clobber")
             command("gh", "release", "upload", tag, str(directory / "repo.json"), "--repo", repository(), "--clobber")
         if read_channel(channel) != entries:
@@ -172,7 +160,7 @@ def verify_bundle(directory, expected=None):
     if manifest["version"] != entry["version"] or manifest["name"] != entry["internalName"]:
         raise ValueError("Manifest and catalogue disagree")
     if expected is not None and entry != expected:
-        raise ValueError("Release does not match catalogue snapshot")
+        raise ValueError("Release does not match catalogue entry")
     return metadata
 
 

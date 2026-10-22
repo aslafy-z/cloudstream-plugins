@@ -82,27 +82,43 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum"):
                 r.verify_bundle(directory)
 
-    def test_channel_reads_content_addressed_snapshot(self):
-        data = r.encoded([entry()])
-        filename = f"plugins-{r.sha256(data)}.json"
-        repo = {"pluginLists": [r.asset_url("catalog-dev", filename)]}
+    def test_channel_reads_fixed_plugin_list(self):
+        repo = {"pluginLists": [r.asset_url("catalog-dev", "plugins.json")]}
         with patch.object(r, "release_info", return_value={}), \
-             patch.object(r, "asset", side_effect=[r.encoded(repo), data]):
+             patch.object(r, "asset", side_effect=[r.encoded(repo), r.encoded([entry()])]) as asset:
             self.assertEqual(r.read_channel("dev"), [entry()])
-        with patch.object(r, "release_info", return_value={}), \
-             patch.object(r, "asset", side_effect=[r.encoded(repo), b"[]"]):
-            with self.assertRaisesRegex(ValueError, "checksum"):
-                r.read_channel("dev")
+            self.assertEqual(asset.call_args_list[-1].args, ("catalog-dev", "plugins.json"))
 
-    def test_snapshot_uploaded_before_channel_pointer(self):
-        calls = []
+    def test_channel_rejects_foreign_or_other_channel_lists(self):
+        for url in ("https://example.invalid/plugins.json", r.asset_url("catalog-stable", "plugins.json"),
+                    r.asset_url("catalog-dev", "plugins-old.json")):
+            with patch.object(r, "release_info", return_value={}), \
+                 patch.object(r, "asset", return_value=r.encoded({"pluginLists": [url]})):
+                with self.assertRaisesRegex(ValueError, "this channel"):
+                    r.read_channel("dev")
+
+    def test_publication_only_uploads_fixed_files_in_order(self):
+        uploaded = []
+        def upload(*args):
+            path = Path(args[4])
+            uploaded.append((path.name, json.loads(path.read_text())))
         with patch.object(r, "release_info", return_value={"assets": []}), \
-             patch.object(r, "command", side_effect=lambda *args: calls.append(args)), \
+             patch.object(r, "command", side_effect=upload), \
              patch.object(r, "read_channel", return_value=[entry()]):
             r.write_channel("dev", [entry()], "abc")
-        uploaded = [Path(args[4]).name for args in calls]
-        self.assertTrue(uploaded[0].startswith("plugins-"))
-        self.assertEqual(uploaded[1:], ["plugins.json", "repo.json"])
+        self.assertEqual([name for name, _ in uploaded], ["plugins.json", "repo.json"])
+        self.assertEqual(uploaded[0][1], [entry()])
+        self.assertEqual(uploaded[1][1]["pluginLists"], [r.asset_url("catalog-dev", "plugins.json")])
+
+    def test_new_channel_contains_only_fixed_files(self):
+        captured = []
+        def create(*args):
+            captured.extend(Path(arg).name for arg in args[4:6])
+        with patch.object(r, "release_info", return_value=None), \
+             patch.object(r, "command", side_effect=create), \
+             patch.object(r, "read_channel", return_value=[entry()]):
+            r.write_channel("stable", [entry()], "abc")
+        self.assertEqual(set(captured), {"plugins.json", "repo.json"})
 
     def test_fingerprints_ignore_other_plugins_and_docs_but_include_shared_build(self):
         with tempfile.TemporaryDirectory() as directory:
