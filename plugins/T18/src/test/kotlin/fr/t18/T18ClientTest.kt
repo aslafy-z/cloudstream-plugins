@@ -12,8 +12,15 @@ class T18ClientTest {
         assertEquals("Programme", item.title); assertEquals("https://resize.t18.fr/poster.jpg", item.poster)
     }
     @Test fun `replays are deduplicated and ordered by broadcast date`() {
-        val items = T18Client.replays(JSONArray("""[{"url":"/prog/test/new","title":"New","broadcastedAt":"2026-10-22"},{"url":"/prog/test/old","title":"Old","broadcastedAt":"2026-10-21"},{"url":"/prog/test/new","title":"New"}]"""))
+        val items = T18Client.orderedReplays(T18Client.replays(JSONArray("""[{"url":"/prog/test/new","title":"New","broadcastedAt":"2026-10-22"},{"url":"/prog/test/old","title":"Old","broadcastedAt":"2026-10-21"},{"url":"/prog/test/new","title":"New"}]""")))
         assertEquals(listOf("Old", "New"), items.map { it.title })
+    }
+    @Test fun `same day episodes reverse source order across pagination boundaries`() {
+        fun item(id: String, date: String) = T18Item("https://t18.fr/prog/$id", id, null, date = date)
+        val page1 = listOf(item("episode4", "2026-10-22"), item("episode3", "2026-10-21"))
+        val page2 = listOf(item("episode3", "2026-10-21"), item("episode2", "2026-10-21"), item("episode1", "2026-10-20"))
+        assertEquals(listOf("episode1", "episode2", "episode3", "episode4"),
+            T18Client.orderedReplays(page1 + page2).map { it.title })
     }
     @Test fun `Dailymotion identifier is validated and catalogue origin is restricted`() {
         assertEquals("k123abc", T18Client.videoId("""<div data-dailymotion-video-id="k123abc"></div>"""))

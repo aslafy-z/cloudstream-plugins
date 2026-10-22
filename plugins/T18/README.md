@@ -10,7 +10,7 @@ Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../READ
 
 - Browse programme categories with posters and descriptions.
 - Search titles across the programme catalogue.
-- Load paginated replay lists, deduplicated and ordered by the supplied broadcast date.
+- Load paginated replay lists, deduplicated and ordered by the supplied broadcast date, with source order reversed for episodes sharing a date.
 - Resolve Dailymotion HLS streams with the required player headers.
 - Cache catalogue responses in memory for 10 minutes; CloudStream manages image caching.
 

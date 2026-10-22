@@ -38,7 +38,10 @@ internal class T18Client {
         fun replays(array: JSONArray): List<T18Item> = array.objects().mapNotNull {
             T18Item(address(it.text("url") ?: return@mapNotNull null), it.text("title") ?: return@mapNotNull null,
                 it.text("imageUrl"), it.text("summary"), it.text("broadcastedAt"))
-        }.distinctBy { it.url }.sortedBy { it.date.orEmpty() }
+        }
+        // The API is newest first, including episodes sharing a midnight-only date.
+        fun orderedReplays(items: List<T18Item>): List<T18Item> = items.distinctBy { it.url }
+            .reversed().sortedBy { it.date.orEmpty() }
         fun videoId(html: String) = Jsoup.parse(html).selectFirst("[data-dailymotion-video-id]")?.attr("data-dailymotion-video-id")
             ?.takeIf { Regex("[A-Za-z0-9]+").matches(it) }
     }
@@ -76,10 +79,10 @@ internal class T18Client {
         val count = pagination.attr("data-pagination-pages-count").toIntOrNull() ?: 1
         check(count in 1..100) { "T18 returned an unsupported replay page count." }
         val endpoint = address(pagination.attr("data-pagination-url"))
-        val episodes = (1..count).flatMap { number ->
+        val episodes = orderedReplays((1..count).flatMap { number ->
             val page = endpoint.toHttpUrl().newBuilder().setQueryParameter("p", number.toString()).build().toString()
             replays(JSONArray(get(page)))
-        }.distinctBy { it.url }.sortedBy { it.date.orEmpty() }
+        })
         if (episodes.isEmpty()) throw IOException("No available replays in this T18 programme.")
         return T18Details(meta, episodes, false)
     }
