@@ -5,7 +5,7 @@ Unofficial TF1+ CloudStream provider, including TF1, TMC, TFX, TF1 Séries Films
 Features:
 - Browse channel programmes and search programme and replay metadata.
 - Load programme replays, including SmartTV editorial season lists when available.
-- Account settings inside CloudStream: sign in, sign out, and account status.
+- Account settings inside CloudStream: sign in, sign out, account status and copyable diagnostics.
 - AES-256-GCM encrypted credential storage using Android Keystore.
 - DASH Widevine playback using the device's normal CDM, with licence headers restricted to the licence endpoint.
 - In-memory catalogue cache; no backend, no API keys stored outside the client.
@@ -15,6 +15,22 @@ Install the plugin and open CloudStream > Extensions > TF1+ > Settings.
 Enter the credentials for an existing TF1+ account. Login happens over HTTPS.
 The password is never shown again, and the session token is only cached in memory.
 The plugin attempts to renew the session when needed.
+
+## Diagnostics
+
+Open **CloudStream > Extensions > TF1+ > Settings > Plugin diagnostics**.
+
+- Reproduce the problem (search, open a programme, select an episode, tap Play).
+- Use **Copy** to copy the diagnostic report, then attach it to a GitHub issue.
+- Use **Clear** to reset the in-memory event history before reproducing.
+- Each event has a timestamp and an operation label. HTTP failures include numeric status codes and no request URLs.
+- The latest 100 events are kept only in memory for the plugin session.
+- Identifiers, credentials, JWTs, Gigya signatures, license challenges, request/response bodies, URLs and arbitrary exception messages are never added.
+
+Interpretation: if **Resolve replay: failed (HTTP 401/403)** appears, TF1+ rejected stream resolution.
+If **DRM stream handed to player** is the last event, the plugin supplied a link and the next investigation is CloudStream's player, DASH and Widevine processing.
+If **Request Widevine license: failed (HTTP ...)** appears, the license server rejected a request.
+Note that device/player errors may occur outside the plugin and require CloudStream's own Logcat export.
 
 ## Status / limitations
 This is an experimental implementation adapted from the **TF1+** routes of
