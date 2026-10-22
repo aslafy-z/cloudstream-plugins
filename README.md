@@ -31,6 +31,7 @@ To change channels, remove the installed plugins and their repository, then inst
 | [FranceTV](plugins/FranceTV/README.md) | france.tv channel shelves, search, seasons and direct DASH/HLS replay playback |
 | [RMCPlus](plugins/RMCPlus/README.md) | RMC+ channel shelves, search, encrypted account settings and Widevine replay playback |
 | [TV5MONDEPlus](plugins/TV5MONDEPlus/README.md) | TV5MONDEplus films and series with search, anonymous access and Widevine playback |
+| [Novo19](plugins/Novo19/README.md) | NOVO19 categories, catalogue search, series and anonymous Widevine playback |
 
 See each plugin's README for account setup and troubleshooting.
 
