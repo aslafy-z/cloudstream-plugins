@@ -66,11 +66,15 @@ From the repository root:
 
 Tests use synthetic data and cover authentication, catalogue mapping, episode ordering, playback resolution, license handling, Cast requests, relay access restrictions, diagnostic timestamps and Android clipboard line breaks. They do not replace device testing.
 
-## References
+## Sources and credits
 
-An independent Kotlin implementation of the protocol described by [Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore/blob/dev/resources/lib/channels/fr/6play.py). Unofficial APIs may change; API clients are isolated in `src/main/kotlin/fr/m6plus/api`.
+Most of the API research and replay integration work behind M6Plus comes from [Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore) and its contributors, particularly the [M6 / 6play connector (`6play.py`)](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore/blob/dev/resources/lib/channels/fr/6play.py). Its catalogue, Gigya authentication and DASH/Widevine playback flows provided the foundation for this plugin.
+
+The CloudStream integration is implemented in Kotlin, with plugin settings, diagnostics and Chromecast support. Unofficial APIs may change; API clients are isolated in `src/main/kotlin/fr/m6plus/api`.
+
+### Additional references
 
 - [CloudStream Cast issue #3274](https://github.com/recloudstream/cloudstream/issues/3274) and [fix #3275](https://github.com/recloudstream/cloudstream/pull/3275)
 - [Google Cast DRM license declarations](https://developers.google.com/cast/docs/media/streaming_protocols#drm)
 - [Shaka Player DASH content protection](https://github.com/shaka-project/shaka-player/blob/main/lib/dash/content_protection.js)
-- [License](../LICENSE)
+- [License](../../LICENSE)

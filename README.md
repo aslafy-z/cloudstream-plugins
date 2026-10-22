@@ -46,6 +46,10 @@ To promote tested builds, open **Actions → Promote plugins to Stable → Run w
 Promotion verifies the selected files and updates Stable without rebuilding.
 To roll back, revert the plugin source and publish a new build; CloudStream does not automatically downgrade.
 
+## Credits
+
+Most of the API research and replay integration work behind these plugins comes from [Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore) and its contributors. Their connectors are the foundation for the catalogue, authentication and playback flows implemented here in Kotlin for CloudStream. Each plugin's README links to its corresponding upstream implementation.
+
 ## Development
 
 Requires Java 17 and Android SDK 35.

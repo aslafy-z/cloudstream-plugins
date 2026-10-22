@@ -35,9 +35,7 @@ If **Request Widevine license: failed (HTTP ...)** appears, the license server r
 Note that device/player errors may occur outside the plugin and require CloudStream's own Logcat export.
 
 ## Status / limitations
-This is an experimental implementation adapted from the **TF1+** routes of
-[Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore/blob/dev/resources/lib/channels/fr/tf1plus.py).
-The provider is not affiliated with TF1. GraphQL persisted-query IDs, login flows and stream
+This provider is experimental and is not affiliated with TF1. GraphQL persisted-query IDs, login flows and stream
 licence headers are subject to upstream changes. Use a valid account, compatible Widevine
 device and an authorised region. No DRM circumvention or content downloads.
 Chromecast and live TV are not implemented.
@@ -52,3 +50,12 @@ Run from the repository root:
 ```sh
 ./gradlew --no-daemon TF1Plus:testDebugUnitTest TF1Plus:make
 ```
+
+## Sources and credits
+
+Most of the API research and replay integration work behind TF1Plus comes from [Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore) and its contributors, particularly the [TF1+ connector (`tf1plus.py`)](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore/blob/dev/resources/lib/channels/fr/tf1plus.py). Its catalogue, Gigya authentication and DASH/Widevine playback flows provided the foundation for this plugin.
+
+The CloudStream integration is implemented in Kotlin, with plugin settings, encrypted sessions and diagnostics.
+
+- [CloudStream plugin template](https://github.com/recloudstream/TestPlugins)
+- [License](../../LICENSE)
