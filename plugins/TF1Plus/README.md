@@ -2,7 +2,9 @@
 
 Unofficial TF1+ CloudStream provider, including TF1, TMC, TFX, TF1 Séries Films and LCI.
 
-Requires Android 6 (API 23) or newer, a recent CloudStream pre-release and a TF1+ account. Account permissions and geographic restrictions apply.
+Requires Android 6 (API 23) or newer and a TF1+ account. Account permissions and geographic restrictions apply.
+
+Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../README.md#compatibility).
 
 ## Features
 

@@ -4,7 +4,12 @@
 
 ## Installation
 
-Add one repository URL in CloudStream's extension settings.
+In CloudStream, open **Settings → Extensions → Add repository** and enter a short code or the corresponding URL.
+
+| Channel | Short code |
+| --- | --- |
+| Stable | `replayfr` |
+| Dev | `replayfrdev` |
 
 **Stable**
 
@@ -20,6 +25,12 @@ https://github.com/aslafy-z/cloudstream-plugins/releases/download/catalog-dev/re
 
 Stable contains manually approved builds. Dev receives successful builds automatically.
 To change channels, remove the installed plugins and their repository, then install from the other channel.
+
+## Compatibility
+
+The plugins target CloudStream 4.8.0 APIs. Its stable release includes the DRM links, player interceptors and plugin settings used here. Runtime playback tests currently use `4.8.0-PRE-castfix.1`, a build based on the 4.8.0 pre-release with the season-index Chromecast fix. The stable 4.8.0 APK has not been tested with every plugin.
+
+See each plugin's README for its Android requirement and verified playback paths.
 
 ## Plugins
 

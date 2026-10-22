@@ -2,7 +2,9 @@
 
 Unofficial RMC+ provider for RMC Story, RMC Découverte and RMC Life replays.
 
-Requires Android 6 (API 23) or newer and a recent CloudStream pre-release. Account permissions and geographic restrictions apply.
+Requires Android 6 (API 23) or newer. Account permissions and geographic restrictions apply.
+
+Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../README.md#compatibility).
 
 ## Features
 

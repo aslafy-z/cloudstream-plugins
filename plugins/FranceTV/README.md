@@ -2,7 +2,9 @@
 
 Unofficial france.tv provider for France 2, France 3, France 4, France 5, franceinfo and France tv Slash replays.
 
-Requires Android 5 (API 21) or newer and a recent CloudStream pre-release. Programme availability, account requirements and geographic restrictions apply.
+Requires Android 5 (API 21) or newer. Programme availability, account requirements and geographic restrictions apply.
+
+Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../README.md#compatibility).
 
 ## Features
 

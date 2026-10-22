@@ -2,7 +2,9 @@
 
 Unofficial NOVO19 provider for documentaries, films, entertainment and replay series.
 
-Requires Android 5 (API 21) or newer and a recent CloudStream pre-release. Programme rights and geographic restrictions apply.
+Requires Android 5 (API 21) or newer. Programme rights and geographic restrictions apply.
+
+Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../README.md#compatibility).
 
 ## Features
 
