@@ -30,6 +30,9 @@ internal object TF1Diagnostics {
     }
 
     enum class Event(val label: String, val area: String) {
+        EPISODE_SELECTED("Programme selected", "Playback"),
+        PLAYBACK_REQUESTED("Replay link requested", "Playback"),
+        LINK_EMITTED("DRM stream handed to player", "Playback"),
         PLUGIN_LOADED("Plugin loaded", "Plugin"),
         PLUGIN_CLOSED("Plugin unloaded", "Plugin"),
         TOKEN_REUSED("Playback token reused", "Auth"),
@@ -74,7 +77,7 @@ internal object TF1Diagnostics {
     }
 
     fun snapshot(): String = buffer.snapshot()
-    fun report(): String = "TF1Plus v2 - plugin diagnostics\n" + snapshot() + "\n"
+    fun report(): String = "TF1Plus - plugin diagnostics\n" + snapshot() + "\n"
     fun clear() = buffer.clear()
 }
 
