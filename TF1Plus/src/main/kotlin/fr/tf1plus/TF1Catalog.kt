@@ -59,6 +59,8 @@ internal class TF1Catalog(private val http: TF1Http) {
         return response.optJSONObject("data") ?: throw IllegalStateException("Invalid TF1+ catalogue response.")
     }
 
+    internal fun httpGet(url: String): String = http.get(url, cacheMs = cacheMs)
+
     fun categories(): List<TF1Category> {
         val data = graph("909c68c0", JSONObject())
         return data.keys().asSequence().mapNotNull { key -> data.optJSONObject(key) }

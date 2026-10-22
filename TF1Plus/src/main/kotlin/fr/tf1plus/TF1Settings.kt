@@ -66,7 +66,7 @@ internal class TF1EncryptedStore(context: Context) : TF1CredentialsStore {
         generator.init(KeyGenParameterSpec.Builder(alias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_NONE)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256).build())
         return generator.generateKey()
     }
