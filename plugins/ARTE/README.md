@@ -2,7 +2,7 @@
 
 Unofficial ARTE provider for French documentaries, films, series and concerts.
 
-Requires Android 5 (API 21) or newer. Geographic restrictions and programme availability apply.
+Requires Android 6 (API 23) or newer. Geographic restrictions and programme availability apply.
 
 Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../README.md#compatibility).
 
