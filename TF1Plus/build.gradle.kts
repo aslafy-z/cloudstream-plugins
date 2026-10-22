@@ -1,4 +1,4 @@
-version = 1
+version = 2
 
 cloudstream {
     description = "TF1+, TMC, TFX, TF1 Series Films and LCI replays with Widevine"
