@@ -8,6 +8,9 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.text.InputType
 import android.view.WindowManager
+import android.widget.Button
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -51,6 +54,7 @@ internal class TF1EncryptedStore(context: Context) : TF1CredentialsStore {
             val json = JSONObject(String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8))
             TF1Credentials(json.getString("email"), json.getString("password"))
         } catch (_: Exception) {
+            TF1Diagnostics.record(TF1Diagnostics.Event.STORAGE_FAILED)
             null // Android Keystore keys cannot be restored from device backups.
         }
     }
@@ -98,6 +102,17 @@ class TF1SettingsFragment : DialogFragment() {
         layout.addView(status)
         layout.addView(email)
         layout.addView(password)
+        layout.addView(Button(context).apply {
+            text = "Plugin diagnostics"
+            setOnClickListener {
+                val report = TF1Diagnostics.report()
+                AlertDialog.Builder(context).setTitle("Plugin diagnostics").setMessage(report)
+                    .setPositiveButton("Close", null)
+                    .setNeutralButton("Copy") { _, _ -> copyTF1DiagnosticReport(context, report) }
+                    .setNegativeButton("Clear") { _, _ -> TF1Diagnostics.clear() }
+                    .show()
+            }
+        })
         val dialog = AlertDialog.Builder(context).setTitle("TF1+").setView(layout)
             .setPositiveButton("Sign in", null)
             .setNeutralButton("Sign out", null)
@@ -145,4 +160,9 @@ class TF1SettingsFragment : DialogFragment() {
         }
         return dialog
     }
+}
+
+internal fun copyTF1DiagnosticReport(context: Context, report: String) {
+    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+        .setPrimaryClip(ClipData.newPlainText("TF1Plus plugin diagnostics", report))
 }
