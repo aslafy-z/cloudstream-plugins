@@ -102,9 +102,8 @@ class TF1PlusProvider : MainAPI() {
             ExtractorLinkType.DASH, WIDEVINE_UUID) {
             licenseUrl = stream.licenseUrl
         }
-        if (stream.licenseHeaders.isNotEmpty()) {
-            videoInterceptors[drm] = TF1LicenseInterceptor(stream.licenseUrl, stream.licenseHeaders)
-        }
+        // Install even without custom DRM headers so license requests remain observable.
+        videoInterceptors[drm] = TF1LicenseInterceptor(stream.licenseUrl, stream.licenseHeaders)
         stream.subtitles.forEach { subtitleCallback(newSubtitleFile("Français", it)) }
         callback(drm)
         TF1Diagnostics.record(TF1Diagnostics.Event.LINK_EMITTED)
