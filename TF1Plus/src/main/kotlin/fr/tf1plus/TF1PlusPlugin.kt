@@ -14,11 +14,13 @@ internal object TF1Runtime {
         private set
 
     fun init(context: Context) {
+        TF1Diagnostics.record(TF1Diagnostics.Event.PLUGIN_LOADED)
         auth = TF1Auth(http, TF1EncryptedStore(context.applicationContext))
         playback = TF1Playback(http, auth)
     }
 
     fun close() {
+        TF1Diagnostics.record(TF1Diagnostics.Event.PLUGIN_CLOSED)
         if (::auth.isInitialized) auth.clearMemory()
     }
 }
