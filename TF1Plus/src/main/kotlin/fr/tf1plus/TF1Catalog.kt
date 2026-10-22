@@ -33,7 +33,7 @@ internal object TF1Mappings {
         val id = video.stringOrNull("id") ?: return@mapNotNull null
         val decor = video.optJSONObject("decoration")
         val title = decor?.stringOrNull("label") ?: return@mapNotNull null
-        val images = decor.optJSONArray("images")
+        val images = decor?.optJSONArray("images")
         val poster = image(item, "image") ?: images?.optJSONObject(1)?.optJSONArray("sources")
             ?.optJSONObject(0)?.stringOrNull("url") ?: images?.optJSONObject(0)
             ?.optJSONArray("sources")?.optJSONObject(0)?.stringOrNull("url")
@@ -41,7 +41,7 @@ internal object TF1Mappings {
             ?.groupValues?.getOrNull(1)?.toIntOrNull()
         val episode = Regex("(?i)(?:épisode|episode|ep|e)\\s*[.: -]?\\s*(\\d+)").find(title)
             ?.groupValues?.getOrNull(1)?.toIntOrNull()
-        TF1Video(id, title, poster, decor.stringOrNull("summary") ?: decor.stringOrNull("description"),
+        TF1Video(id, title, poster, decor?.stringOrNull("summary") ?: decor?.stringOrNull("description"),
             season, episode)
     }
 }
@@ -53,7 +53,7 @@ internal class TF1Catalog(private val http: TF1Http) {
     private fun graph(id: String, vars: JSONObject): JSONObject {
         val url = TF1Http.query(graphql, mapOf("id" to id, "variables" to vars.toString()))
         val response = JSONObject(http.get(url, cacheMs = cacheMs))
-        if (response.optJSONArray("errors")?.length() ?: 0 > 0) {
+        if ((response.optJSONArray("errors")?.length() ?: 0) > 0) {
             throw IllegalStateException("TF1+ catalogue query rejected (persisted query may have changed).")
         }
         return response.optJSONObject("data") ?: throw IllegalStateException("Invalid TF1+ catalogue response.")

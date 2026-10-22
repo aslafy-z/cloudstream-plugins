@@ -42,6 +42,11 @@ internal class TF1Auth(private val http: TF1Http, private val store: TF1Credenti
         }
     }
 
+    @Synchronized fun clearMemory() {
+        cachedToken = null
+        tokenExpiryMs = 0
+    }
+
     @Synchronized fun signOut() {
         cachedToken = null
         tokenExpiryMs = 0

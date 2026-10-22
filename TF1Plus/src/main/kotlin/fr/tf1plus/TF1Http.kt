@@ -2,6 +2,9 @@ package fr.tf1plus
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.CookieManager
+import java.net.CookiePolicy
+import java.net.URI
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -9,6 +12,7 @@ import java.net.URLEncoder
 internal class TF1HttpException(val status: Int) : Exception("TF1+ HTTP error ($status)")
 
 internal open class TF1Http {
+    private val cookies = CookieManager(null, CookiePolicy.ACCEPT_ORIGINAL_SERVER)
     private data class CacheEntry(val expiresAt: Long, val content: String)
     private val cache = java.util.Collections.synchronizedMap(
         object : LinkedHashMap<String, CacheEntry>(64, 0.75f, true) {
@@ -46,11 +50,18 @@ internal open class TF1Http {
             headers.forEach { (name, value) -> setRequestProperty(name, value) }
         }
         try {
+            val uri = URI(url)
+            synchronized(cookies) {
+                cookies.get(uri, emptyMap()).forEach { (name, values) ->
+                    if (name.equals("Cookie", ignoreCase = true)) conn.setRequestProperty(name, values.joinToString("; "))
+                }
+            }
             if (payload != null) {
                 conn.doOutput = true
                 conn.outputStream.use { it.write(payload) }
             }
             val code = conn.responseCode
+            synchronized(cookies) { cookies.put(uri, conn.headerFields.filterKeys { it != null }) }
             if (code !in 200..299) throw TF1HttpException(code)
             return conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } finally { conn.disconnect() }
