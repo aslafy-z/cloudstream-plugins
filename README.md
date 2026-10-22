@@ -29,6 +29,7 @@ To change channels, remove the installed plugins and their repository, then inst
 | [TF1Plus](plugins/TF1Plus/README.md) | TF1+, TMC, TFX, TF1 Series Films and LCI replays with search, account settings, Widevine and Chromecast |
 | [ARTE](plugins/ARTE/README.md) | ARTE documentaries, films, series and concerts with search and multilingual HLS playback |
 | [FranceTV](plugins/FranceTV/README.md) | france.tv channel shelves, search, seasons and direct DASH/HLS replay playback |
+| [RMCPlus](plugins/RMCPlus/README.md) | RMC+ channel shelves, search, encrypted account settings and Widevine replay playback |
 
 See each plugin's README for account setup and troubleshooting.
 
