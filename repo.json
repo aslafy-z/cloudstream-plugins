@@ -1,0 +1,8 @@
+{
+  "name": "aslafy-z CloudStream plugins",
+  "description": "Plugins CloudStream indépendants. M6+ est expérimental et nécessite un compte M6+.",
+  "manifestVersion": 1,
+  "pluginLists": [
+    "https://github.com/aslafy-z/csplugins/releases/latest/download/plugins.json"
+  ]
+}

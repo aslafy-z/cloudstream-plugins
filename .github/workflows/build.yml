@@ -1,58 +1,64 @@
-name: Build
-
-# https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#concurrency
-concurrency: 
-  group: "build"
-  cancel-in-progress: true
+name: Build and publish plugins
 
 on:
   push:
-    branches:
-      # choose your default branch
-      - master
-      - main
-    paths-ignore:
-      - '*.md'
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugins-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@master
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          path: "src"
-
-      - name: Checkout builds
-        uses: actions/checkout@master
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test and build all plugins
+        run: ./gradlew --no-daemon testDebugUnitTest make makePluginsJson
+      - name: Package release catalog and assets
+        run: python3 scripts/package_release.py --repository "$GITHUB_REPOSITORY" --tag "build-$GITHUB_RUN_NUMBER"
+      - uses: actions/upload-artifact@v4
         with:
-          ref: "builds"
-          path: "builds"
-      
-      - name: Clean old builds
-        run: rm $GITHUB_WORKSPACE/builds/*.cs3
+          name: plugins
+          path: dist/*
+          if-no-files-found: error
 
-      - name: Setup JDK 17
-        uses: actions/setup-java@v1
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          java-version: 17
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-
-      - name: Build Plugins
+          name: plugins
+          path: dist
+      - name: Publish compiled plugins as release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/src
-          chmod +x gradlew
-          ./gradlew make makePluginsJson
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
-          cp build/plugins.json $GITHUB_WORKSPACE/builds
-
-      - name: Push builds
-        run: |
-          cd $GITHUB_WORKSPACE/builds
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add .
-          git commit --amend -m "Build $GITHUB_SHA" || exit 0   # do not error if nothing to commit
-          git push --force
+          tag="build-$GITHUB_RUN_NUMBER"
+          cat > notes.md <<'NOTES'
+          Plugins compiled from the commit linked to this release.
+          Install the repository using repo.json, or download individual .cs3 assets.
+          M6+ is experimental: playback with an authenticated M6+ account and Android TV Widevine still needs device validation.
+          NOTES
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "CloudStream plugins · build $GITHUB_RUN_NUMBER" --notes-file notes.md --latest
+          fi

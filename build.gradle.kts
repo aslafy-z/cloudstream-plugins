@@ -38,7 +38,7 @@ subprojects {
 
     cloudstream {
         // when running through github workflow, GITHUB_REPOSITORY should contain current repository name
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "user/repo")
+        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "aslafy-z/csplugins")
     }
 
     android {
@@ -77,6 +77,10 @@ subprojects {
         // These dependencies can include any of those which are added by the app,
         // but you don't need to include any of them if you don't need them.
         // https://github.com/recloudstream/cloudstream/blob/master/app/build.gradle.kts
+        implementation("androidx.appcompat:appcompat:1.7.0")
+        implementation("androidx.fragment:fragment-ktx:1.8.5")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+        implementation("com.squareup.okhttp3:okhttp:4.12.0")
         implementation(kotlin("stdlib")) // Adds Standard Kotlin Features
         implementation("com.github.Blatzar:NiceHttp:0.4.11") // HTTP Lib
         implementation("org.jsoup:jsoup:1.18.3") // HTML Parser

@@ -1,58 +1,48 @@
-**⚠️ This is currently under development, dont use it yet if you're not comfortable with constantly merging new changes**
+# csplugins
 
-# `Cloudstream3 Plugin Repo Template`
+Dépôt multi-plugins CloudStream maintenu par **aslafy-z**. Chaque dossier contenant un `build.gradle.kts` est un plugin indépendant. Le premier module est **M6Plus**.
 
-Template for a [Cloudstream3](https://github.com/recloudstream) plugin repo
+## Installation
 
-**⚠️ Make sure you check "Include all branches" when using this template**
+Dans CloudStream, ajouter ce dépôt d'extensions :
 
- 
-## Getting started with writing your first plugin
+```text
+https://raw.githubusercontent.com/aslafy-z/csplugins/main/repo.json
+```
 
-This template includes 1 example plugin.
+Les [releases](https://github.com/aslafy-z/csplugins/releases) contiennent les fichiers **`.cs3`**, le catalogue `plugins.json`, `repo.json` et les sommes SHA-256. Les fichiers `.kt` sont les sources Kotlin ; le format installable CloudStream est `.cs3`.
 
-1. Open the root build.gradle.kts, read the comments and replace all the placeholders
-2. Familiarize yourself with the project structure. Most files are commented
-3. Build or deploy your first plugin using:
-   - Windows: `.\gradlew.bat ExampleProvider:make` or `.\gradlew.bat ExampleProvider:deployWithAdb`
-   - Linux & Mac: `./gradlew ExampleProvider:make` or `./gradlew ExampleProvider:deployWithAdb`
+## M6+ — expérimental
 
+- Catalogue et catégories M6, W9, 6ter et Gulli.
+- Recherche Algolia avec recherche catalogue de secours.
+- Programmes, saisons, épisodes et clips de playlists exposés séparément.
+- Connexion Gigya, échange JWT et renouvellement de session.
+- Identifiants et session chiffrés avec une clé AES-GCM de l'Android Keystore.
+- Lecture DASH avec la licence Widevine officielle du terminal et sous-titres VTT.
+- Cache mémoire des métadonnées (10 minutes) ; le cache des affiches est géré par CloudStream.
 
-## Granting All Files Access on Newer Android Devices
+Android 6/API 23 minimum. Ouvrir les paramètres du plugin pour se connecter avec un compte M6+ autorisé. Les restrictions géographiques et les droits du compte continuent de s'appliquer. Le téléchargement et Chromecast ne sont pas proposés.
 
-For local plugin testing, you need to grant the app "All Files Access" on newer Android devices (Android 11 and above). Here’s how to do it:
+**La compilation et les tests automatisés ne prouvent pas la lecture de bout en bout.** La connexion avec un compte réel, l'ergonomie à la télécommande, la licence Widevine et la reprise après redémarrage doivent encore être validées sur Android TV. Aucun compte ni identifiant utilisateur n'est livré dans ce dépôt.
 
-### Using ADB
+Le lecteur CloudStream traite `keyRequestParameters` comme des options du CDM. Le plugin utilise `getVideoInterceptor()` pour ajouter l'en-tête HTTP `x-dt-auth-token` uniquement au serveur de licence DRMtoday et convertir une éventuelle réponse JSON `license` en octets pour le CDM. Il ne déchiffre pas les contenus et n'extrait aucune clé Widevine.
 
-* `adb shell appops set --uid PACKAGE_NAME MANAGE_EXTERNAL_STORAGE allow`
-* Replace `PACKAGE_NAME` with the name of the package for the Cloudstream3 version you are using:
-   - debug: `com.lagradost.cloudstream3.prerelease.debug`
-   - prerelease: `com.lagradost.cloudstream3.prerelease`
-   - stable: `com.lagradost.cloudstream3`
+## Développement
 
-### Manually
+Avec Java 17 et le SDK Android 35 configurés :
 
-1. **Open Settings**: Go to your device’s Settings menu.
+```sh
+./gradlew M6Plus:testDebugUnitTest M6Plus:make
+./gradlew make makePluginsJson
+```
 
-2. **Navigate to Special Access**:
-   - Tap on "Apps & notifications" or "Apps".
-   - Select "Special app access" or "Special access".
+Pour ajouter un plugin, créer `NomDuPlugin/build.gradle.kts` et ses sources sous `src/main/kotlin`. La découverte des modules et la publication des assets sont automatiques. Incrémenter la version entière du module lorsqu'il change.
 
-3. **Select All Files Access**:
-   - Tap on "All files access".
-   - It may be under the three vertical dots menu towards the top of the screen.
+Chaque push sur `main` compile et teste tous les modules, puis publie une release `build-N`. Le catalogue de la dernière release pointe vers les assets de cette release précise. Une erreur de compilation ou de test empêche la publication.
 
-4. **Grant Access to the App**: Find the app in the list and tap on it to toggle it, if it is not already enabled.
+## Références
 
-6. **Restart the App**: Close and reopen the app to apply the changes.
+Implémentation Kotlin indépendante du protocole décrit par [Catch-up TV & More](https://github.com/Catch-up-TV-and-More/plugin.video.catchuptvandmore/blob/dev/resources/lib/channels/fr/6play.py), à partir du [template public CloudStream](https://github.com/recloudstream/TestPlugins). Les API non officielles peuvent évoluer ; elles sont isolées dans `M6Plus/src/main/kotlin/fr/m6plus/api`.
 
-
-## License
-
-Everything in this repo is released into the public domain. You may use it however you want with no conditions whatsoever
-
-
-## Attribution
-
-This template as well as the gradle plugin and the whole plugin system is **heavily** based on [Aliucord](https://github.com/Aliucord).
-*Go use it, it's a great mobile discord client mod!*
+Voir la [documentation CloudStream](https://recloudstream.github.io/csdocs/devs/gettingstarted/) pour la configuration du chargeur d'extensions.
