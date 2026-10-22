@@ -1,8 +1,11 @@
-# TF1Plus (CloudStream)
+# TF1Plus
 
 Unofficial TF1+ CloudStream provider, including TF1, TMC, TFX, TF1 Séries Films and LCI.
 
-Features:
+Requires Android 6 (API 23) or newer, a recent CloudStream pre-release and a TF1+ account. Account permissions and geographic restrictions apply.
+
+## Features
+
 - Browse channel programmes and search programme and replay metadata.
 - Load programme replays, including SmartTV editorial season lists when available.
 - Account settings inside CloudStream: sign in, sign out, account status and copyable diagnostics.
@@ -12,55 +15,73 @@ Features:
 - In-memory catalogue cache; no backend, no API keys stored outside the client.
 
 ## Sign in
-Install the plugin and open CloudStream > Extensions > TF1+ > Settings.
-Enter the credentials for an existing TF1+ account. Login happens over HTTPS.
-Credentials and the playback token are encrypted with Android Keystore. A valid session
-is reused after restarting CloudStream and renewed when it expires. Playback authorization
-failures trigger one session refresh before the error is reported. Signing out clears the
-saved account and cached playback links.
+
+Open **CloudStream → Extensions → TF1+ → Settings** and enter your TF1+ account credentials.
+
+Credentials and sessions are encrypted using Android Keystore. Saved sessions are reused and expired sessions are renewed automatically. Playback authorization failures trigger one session refresh before reporting the error. Signing in or out clears the plugin's cached playback links; signing out also removes the saved account.
 
 ## Chromecast
 
-Connect CloudStream to your Chromecast, open an episode's action menu, then choose **TF1+ direct Chromecast (relay)**. Keep CloudStream open and the phone on the TV's network. The phone relays the DASH manifest and Widevine licence requests; the TV downloads encrypted media directly from TF1.
+The episode menu offers one action:
 
-CloudStream's standard **Cast episode** and **Cast mirror** actions also receive relay links. Some CloudStream versions have an episode-index bug on later seasons; the direct action avoids that path. See the [upstream fix](https://github.com/recloudstream/cloudstream/pull/3275).
+| Action | Usage |
+| --- | --- |
+| **TF1+ direct Chromecast (relay)** | Connect using CloudStream's Cast button first. Keep the app open and the phone on the TV's network: the phone relays the manifest and licenses, while the TV downloads video segments directly. |
 
-The relay accepts only the connected TV and the phone itself. Session URLs contain no account tokens. Changing accounts, ending Cast or unloading the plugin closes the relay and clears TF1's cached links. Playback uses the receiver's normal Widevine CDM.
+CloudStream's standard **Cast episode** and **Cast mirror** actions also receive relay links. Some versions have an episode-index bug on later seasons. An [upstream fix](https://github.com/recloudstream/cloudstream/pull/3275) and a [validated test APK](https://github.com/aslafy-z/cloudstream/releases/tag/cloudstream-castfix-1) are available. The plugin's direct action works independently of that host bug.
 
-Replay playback and licence acquisition through the relay were verified on an Android TV emulator. Phone discovery and the Android sender UI still require a physical-device check.
+The official TF1+ Cast receiver is not implemented.
 
 ## Diagnostics
 
-Open **CloudStream > Extensions > TF1+ > Settings > Plugin diagnostics**.
+Open the plugin settings and choose **Plugin diagnostics**. The report covers sign-in, session renewal, catalogue loading, search, playback, licenses and Chromecast.
 
-- Reproduce the problem (search, open a programme, select an episode, tap Play).
-- Use **Copy** to copy the diagnostic report, then attach it to a GitHub issue.
-- Use **Clear** to reset the in-memory event history before reproducing.
-- Each event has a timestamp and an operation label. HTTP failures include numeric status codes and no request URLs.
-- The latest 100 events are kept only in memory for the plugin session.
-- Identifiers, credentials, JWTs, Gigya signatures, license challenges, request/response bodies, URLs and arbitrary exception messages are never added.
+- Every event has a date, time, milliseconds and UTC offset.
+- Only the latest 100 events are kept, in memory for the current plugin session.
+- Failures include HTTP status codes when available. Credentials, account identifiers, programme titles, search queries, URLs, tokens, license bodies and exception messages are excluded.
+- **Copy** copies the displayed report as plain text with real line breaks; **Clear** empties the report.
 
-Interpretation: if **Resolve replay: failed (HTTP 401/403)** appears, TF1+ rejected stream resolution.
-If **DRM stream handed to player** is the last event, the plugin supplied a link and the next investigation is CloudStream's player, DASH and Widevine processing.
-If **Request Widevine license: failed (HTTP ...)** appears, the license server rejected a request.
-Note that device/player errors may occur outside the plugin and require CloudStream's own Logcat export.
+CloudStream also offers a global Logcat export under **Settings → Updates and backup → Show logcat**. The plugin report provides a smaller, structured view of its own operations.
 
-## Status / limitations
-This provider is experimental and is not affiliated with TF1. GraphQL persisted-query IDs, login flows and stream
-licence headers are subject to upstream changes. Use a valid account, compatible Widevine
-device and an authorised region. No DRM circumvention or content downloads.
-Live TV and the official TF1+ Cast receiver are not implemented.
-Sign-in, catalogue browsing, search posters and protected replay playback have been tested
-in CloudStream 4.8.0-PRE on an Android TV 11 emulator with Google Widevine L3.
-CI covers payload mapping, session reuse and refresh, diagnostics, and licence endpoint
-isolation. Other devices and their Widevine security levels still require playback testing.
+If **Resolve replay: failed (HTTP 401/403)** appears, TF1+ rejected stream resolution. If **DRM stream handed to player** is the last event, the next investigation is CloudStream's player, DASH and Widevine processing. **Request Widevine license: failed (HTTP ...)** indicates a license request failure. Player errors may require CloudStream's Logcat export.
+
+## Implementation
+
+### Direct relay
+
+The standard Cast receiver plays the same Widevine DASH stream as the local player. A temporary HTTP server on the phone serves the manifest and forwards license requests. The TV downloads video segments directly from the CDN.
+
+1. CloudStream connects to its standard Cast receiver.
+2. The plugin resolves the TF1+ replay and fetches its DASH manifest.
+3. The manifest retains its CDN address in `BaseURL` and advertises a local license URL through `dashif:Laurl` and `ms:laurl`.
+4. Each CDM request is forwarded to the resolved license endpoint. License headers are restricted to that exact endpoint; redirects are rejected.
+5. Chromecast acquires the license and decrypts the content using its own Widevine CDM.
+
+The relay binds to the network interface used to reach the TV and accepts only the connected TV and the phone itself. Session paths use random identifiers and contain no account tokens. Request bodies are limited to 64 KiB, headers and connections are bounded, and sessions expire after six hours without requests. Ending the Cast session, changing accounts or unloading the plugin closes the server.
+
+CloudStream shares its link cache between local playback and Cast. The plugin invalidates only its own entries when Cast sessions change. While the standard receiver is connected, relay links also carry the DRM configuration needed by the local player.
+
+### Cast actions
+
+**TF1+ direct Chromecast (relay)** resolves a fresh link and sends `RemoteMediaClient.load` to the standard session. The request contains one DASH media item, subtitles and the resume position. This action does not automatically play the next episode.
+
+## Status and limitations
+
+Sign-in, catalogue browsing, search posters and protected local replay have been tested in CloudStream 4.8.0-PRE on an Android TV 11 emulator with Widevine L3. Computer-driven tests using the production Kotlin relay and license code also played protected replay on Android TV emulators.
+
+A Pixel 7a emulator discovered the TV, but Google's Android sender SDK rejected its missing Cast device credentials before playback. M6 reproduced the same failure. Full phone-to-TV playback through the plugin's Android Cast actions still needs validation on a certified receiver. Computer-driven tests do not establish that result.
+
+Live TV, replay downloads and the official TF1+ Cast receiver are not supported. Background relay operation, other devices and playback after restarting the app still need device validation. Unofficial APIs, persisted-query IDs and license requirements may change.
 
 ## Development
-Run from the repository root:
+
+From the repository root:
 
 ```sh
 ./gradlew --no-daemon TF1Plus:testDebugUnitTest TF1Plus:make
 ```
+
+Tests use synthetic data and cover authentication, session refresh, catalogue mapping, playback resolution, license endpoint isolation, Cast requests, relay access restrictions, diagnostic timestamps and Android clipboard line breaks. They do not replace device testing.
 
 ## Sources and credits
 
@@ -68,5 +89,9 @@ Most of the API research and replay integration work behind TF1Plus comes from [
 
 The CloudStream integration is implemented in Kotlin, with plugin settings, encrypted sessions and diagnostics.
 
+### Additional references
+
+- [CloudStream Cast issue #3274](https://github.com/recloudstream/cloudstream/issues/3274) and [fix #3275](https://github.com/recloudstream/cloudstream/pull/3275)
+- [Google Cast DRM license declarations](https://developers.google.com/cast/docs/media/streaming_protocols#drm)
 - [CloudStream plugin template](https://github.com/recloudstream/TestPlugins)
 - [License](../../LICENSE)

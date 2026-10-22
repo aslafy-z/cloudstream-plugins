@@ -1,6 +1,10 @@
 # M6Plus
 
-Requires Android 6 (API 23) or newer and a recent CloudStream pre-release. Open the plugin settings to sign in with your M6+ account. Account permissions and geographic restrictions apply.
+Unofficial M6+ provider for M6, W9, 6ter and Gulli replays.
+
+Requires Android 6 (API 23) or newer, a recent CloudStream pre-release and an M6+ account. Account permissions and geographic restrictions apply.
+
+## Features
 
 - Browse by channel and category, or search with programme posters and a catalogue fallback.
 - Episodes are sorted by season, episode and part, with extracts after full programmes. Videos without episode numbers use their broadcast date, then publication date.
@@ -9,7 +13,11 @@ Requires Android 6 (API 23) or newer and a recent CloudStream pre-release. Open 
 - DASH playback uses the device's official Widevine license exchange and supports VTT subtitles. The plugin does not extract encryption keys.
 - Catalogue metadata is cached in memory for 10 minutes; CloudStream manages the image cache.
 
-Local mobile playback and both Chromecast modes have been tested on a physical device. Android TV remote navigation, background relay operation and playback after restarting the app still need device validation. Replay downloads are not supported.
+## Sign in
+
+Open **CloudStream → Extensions → M6+ → Settings** and enter your M6+ account credentials.
+
+Credentials and sessions are encrypted using Android Keystore. Saved sessions are reused and expired sessions are renewed automatically. Signing in or out clears the plugin's cached playback links; signing out also removes the saved account.
 
 ## Chromecast
 
@@ -55,6 +63,9 @@ CloudStream shares its link cache between local playback and Cast. The plugin in
 
 **M6+ native Chromecast (with ads)** uses the official receiver. The plugin renews the Gigya identity, fetches profiles and prompts for a selection when needed. The signed identity stays in memory. The official player handles playback and advertisements. The standard receiver is restored when the session ends.
 
+## Status and limitations
+
+Local mobile playback and both Chromecast modes have been tested on a physical device. Android TV remote navigation, background relay operation and playback after restarting the app still need device validation. Replay downloads are not supported.
 
 ## Development
 
