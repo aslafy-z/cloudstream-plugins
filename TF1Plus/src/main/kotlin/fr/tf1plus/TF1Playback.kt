@@ -75,8 +75,14 @@ internal class TF1LicenseInterceptor(
         if (url.scheme != target.scheme || url.host != target.host ||
             url.port != target.port || url.encodedPath != target.encodedPath ||
             url.encodedQuery != target.encodedQuery) return chain.proceed(chain.request())
+        TF1Diagnostics.record(TF1Diagnostics.Event.LICENSE_REQUEST)
         val builder = chain.request().newBuilder()
         headers.forEach { (key, value) -> builder.header(key, value) }
-        return chain.proceed(builder.build())
+        return TF1Diagnostics.trace(TF1Diagnostics.Operation.LICENSE) {
+            chain.proceed(builder.build()).also { response ->
+                if (response.isSuccessful) TF1Diagnostics.record(TF1Diagnostics.Event.LICENSE_OK)
+                else TF1Diagnostics.failure(TF1Diagnostics.Operation.LICENSE, TF1HttpException(response.code))
+            }
+        }
     }
 }
