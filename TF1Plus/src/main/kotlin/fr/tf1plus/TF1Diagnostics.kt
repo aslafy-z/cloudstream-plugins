@@ -33,6 +33,7 @@ internal object TF1Diagnostics {
         EPISODE_SELECTED("Programme selected", "Playback"),
         PLAYBACK_REQUESTED("Replay link requested", "Playback"),
         LINK_EMITTED("DRM stream handed to player", "Playback"),
+        PLAYER_INITIALIZED("Player requested media interceptor", "Playback"),
         PLUGIN_LOADED("Plugin loaded", "Plugin"),
         PLUGIN_CLOSED("Plugin unloaded", "Plugin"),
         TOKEN_REUSED("Playback token reused", "Auth"),
