@@ -63,7 +63,7 @@ internal class TF1Catalog(private val http: TF1Http) {
 
     fun categories(): List<TF1Category> = TF1Diagnostics.trace(TF1Diagnostics.Operation.CATEGORIES) {
         val data = graph("909c68c0", JSONObject())
-        return data.keys().asSequence().mapNotNull { key -> data.optJSONObject(key) }
+        return@trace data.keys().asSequence().mapNotNull { key -> data.optJSONObject(key) }
             .mapNotNull { item ->
                 val id = item.stringOrNull("id") ?: return@mapNotNull null
                 TF1Category(id, item.stringOrNull("label") ?: return@mapNotNull null)
@@ -76,7 +76,7 @@ internal class TF1Catalog(private val http: TF1Http) {
                 .put("device", "DESKTOP").put("os", "WINDOWS"))
             .put("filter", JSONObject().put("channel", if (channel == "all") "" else channel))
             .put("offset", page.coerceAtLeast(0)).put("limit", limit)
-        return TF1Mappings.programmes(graph("483ce0f", vars)
+        return@trace TF1Mappings.programmes(graph("483ce0f", vars)
             .objectAt("programs")?.optJSONArray("items"))
     }
 
@@ -103,7 +103,7 @@ internal class TF1Catalog(private val http: TF1Http) {
         val decor = data.optJSONObject("decoration")
         val poster = decor?.optJSONObject("image")?.optJSONArray("sourcesWithScales")
             ?.optJSONObject(0)?.stringOrNull("url")
-        return TF1Programme(id, data.stringOrNull("slug") ?: "",
+        return@trace TF1Programme(id, data.stringOrNull("slug") ?: "",
             data.stringOrNull("name") ?: decor?.stringOrNull("label") ?: "TF1+",
             poster, decor?.stringOrNull("description"))
     }
@@ -120,6 +120,6 @@ internal class TF1Catalog(private val http: TF1Http) {
             items.forEach { result[it.id] = it }
             if (items.size < 20 || result.size == before) break
         }
-        return result.values.toList()
+        return@trace result.values.toList()
     }
 }
