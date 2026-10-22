@@ -8,6 +8,7 @@ Features:
 - Account settings inside CloudStream: sign in, sign out, account status and copyable diagnostics.
 - AES-256-GCM encrypted credential and session storage using Android Keystore.
 - DASH Widevine playback using the device's normal CDM, with licence headers restricted to the licence endpoint.
+- Direct Chromecast playback through a local manifest and licence relay.
 - In-memory catalogue cache; no backend, no API keys stored outside the client.
 
 ## Sign in
@@ -17,6 +18,16 @@ Credentials and the playback token are encrypted with Android Keystore. A valid 
 is reused after restarting CloudStream and renewed when it expires. Playback authorization
 failures trigger one session refresh before the error is reported. Signing out clears the
 saved account and cached playback links.
+
+## Chromecast
+
+Connect CloudStream to your Chromecast, open an episode's action menu, then choose **TF1+ direct Chromecast (relay)**. Keep CloudStream open and the phone on the TV's network. The phone relays the DASH manifest and Widevine licence requests; the TV downloads encrypted media directly from TF1.
+
+CloudStream's standard **Cast episode** and **Cast mirror** actions also receive relay links. Some CloudStream versions have an episode-index bug on later seasons; the direct action avoids that path. See the [upstream fix](https://github.com/recloudstream/cloudstream/pull/3275).
+
+The relay accepts only the connected TV and the phone itself. Session URLs contain no account tokens. Changing accounts, ending Cast or unloading the plugin closes the relay and clears TF1's cached links. Playback uses the receiver's normal Widevine CDM.
+
+Replay playback and licence acquisition through the relay were verified on an Android TV emulator. Phone discovery and the Android sender UI still require a physical-device check.
 
 ## Diagnostics
 
@@ -38,7 +49,7 @@ Note that device/player errors may occur outside the plugin and require CloudStr
 This provider is experimental and is not affiliated with TF1. GraphQL persisted-query IDs, login flows and stream
 licence headers are subject to upstream changes. Use a valid account, compatible Widevine
 device and an authorised region. No DRM circumvention or content downloads.
-Chromecast and live TV are not implemented.
+Live TV and the official TF1+ Cast receiver are not implemented.
 Sign-in, catalogue browsing, search posters and protected replay playback have been tested
 in CloudStream 4.8.0-PRE on an Android TV 11 emulator with Google Widevine L3.
 CI covers payload mapping, session reuse and refresh, diagnostics, and licence endpoint

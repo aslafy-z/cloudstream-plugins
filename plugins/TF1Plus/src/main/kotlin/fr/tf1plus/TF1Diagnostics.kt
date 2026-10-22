@@ -43,12 +43,38 @@ internal object TF1Diagnostics {
         NO_REPLAYS("No replay episodes returned", "Catalogue"),
         MANIFEST_READY("DASH manifest resolved", "Playback"),
         LICENSE_REQUEST("License requested by player", "License"),
-        LICENSE_OK("License response accepted", "License")
+        LICENSE_OK("License response accepted", "License"),
+        CONNECTED("Standard receiver connected", "Cast"),
+        PREPARING("Prepare replay", "Cast"),
+        SESSION("Check Cast session", "Cast"),
+        NETWORK("Select network interface", "Cast"),
+        FETCH("Fetch manifest", "Cast"),
+        REWRITE("Prepare relayed manifest", "Cast"),
+        READY("Relay link ready", "Cast"),
+        LOAD_SENT("Playback command sent", "Cast"),
+        LOAD_ACCEPTED("Command accepted by TV", "Cast"),
+        MANIFEST("Manifest requested by TV", "Cast"),
+        LICENSE("License requested by TV", "Cast"),
+        CAST_LICENSE_OK("License sent to TV", "Cast"),
+        LICENSE_FAILED("License request failed", "Cast"),
+        PEER_REJECTED("Relay connection rejected: unexpected device", "Cast"),
+        STOPPED("Relay stopped", "Cast")
     }
 
     private val buffer = TF1DiagnosticBuffer()
 
-    fun record(event: Event) = buffer.append("[${event.area}] ${event.label}")
+    private var stage = Event.SESSION
+
+    @Synchronized fun record(event: Event) {
+        if (event.area == "Cast") stage = event
+        buffer.append("[${event.area}] ${event.label}")
+    }
+
+    @Synchronized fun failed(): String = stage.name.also {
+        buffer.append("[Cast] Failed at stage $it")
+    }
+
+    fun rejected(status: Int) { buffer.append("[Cast] Command rejected (code $status)") }
 
     fun failure(operation: Operation, error: Exception) {
         val detail = when (error) {
@@ -80,7 +106,7 @@ internal object TF1Diagnostics {
 
     fun snapshot(): String = buffer.snapshot()
     fun report(): String = "TF1Plus - plugin diagnostics\n" + snapshot() + "\n"
-    fun clear() = buffer.clear()
+    @Synchronized fun clear() { buffer.clear(); stage = Event.SESSION }
 }
 
 /** Buffer keeps at most 100 entries, and discards raw exception messages and request payloads. */

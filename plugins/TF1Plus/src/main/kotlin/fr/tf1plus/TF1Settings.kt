@@ -139,7 +139,7 @@ class TF1SettingsFragment : DialogFragment() {
                 Thread {
                     val result = try {
                         TF1Runtime.auth.signIn(address, secret)
-                        TF1Runtime.clearPlaybackCache()
+                        TF1Runtime.stopCast()
                         "Signed in to TF1+."
                     } catch (error: TF1AuthException) {
                         error.message ?: "TF1+ sign-in failed."
@@ -157,7 +157,7 @@ class TF1SettingsFragment : DialogFragment() {
             }
             disconnect.setOnClickListener {
                 TF1Runtime.auth.signOut()
-                TF1Runtime.clearPlaybackCache()
+                TF1Runtime.stopCast()
                 email.text.clear()
                 password.text.clear()
                 status.text = "Signed out of TF1+."

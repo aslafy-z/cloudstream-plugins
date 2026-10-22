@@ -16,7 +16,7 @@ class TF1PlusProvider : MainAPI() {
     override val supportedTypes = setOf(TvType.TvSeries, TvType.Movie)
     override val hasMainPage = true
     override val hasDownloadSupport = false
-    override val hasChromecastSupport = false
+    override val hasChromecastSupport = true
     override val mainPage = mainPageOf(
         "tf1" to "TF1", "tmc" to "TMC", "tfx" to "TFX",
         "tf1-series-films" to "TF1 Séries Films", "lci" to "LCI",
@@ -103,6 +103,23 @@ class TF1PlusProvider : MainAPI() {
             throw ErrorLoadingException("TF1+ playback unavailable. Open Plugin diagnostics in the settings.")
         }
         TF1Diagnostics.record(TF1Diagnostics.Event.MANIFEST_READY)
+        if (isCasting || TF1Runtime.castConnected) {
+            val url = try { TF1Runtime.cast.link(stream) }
+                catch (error: CancellationException) { throw error }
+                catch (_: Exception) {
+                    val stage = TF1Diagnostics.failed()
+                    val message = "Chromecast relay failed ($stage). Check Plugin diagnostics in the TF1+ settings."
+                    TF1Runtime.castMessage(message)
+                    throw ErrorLoadingException(message)
+                }
+            stream.subtitles.forEach { subtitleCallback(newSubtitleFile("French", it)) }
+            // CloudStream shares cached links between local playback and Cast.
+            callback(newDrmExtractorLink(name, "TF1+ · Direct Chromecast", url, ExtractorLinkType.DASH, WIDEVINE_UUID) {
+                licenseUrl = url.substringBeforeLast('/') + "/license"
+            })
+            TF1Diagnostics.record(TF1Diagnostics.Event.LINK_EMITTED)
+            return@withContext true
+        }
         val drm = newDrmExtractorLink(name, "TF1+ · Widevine", stream.manifest,
             ExtractorLinkType.DASH, WIDEVINE_UUID) {
             licenseUrl = stream.licenseUrl
