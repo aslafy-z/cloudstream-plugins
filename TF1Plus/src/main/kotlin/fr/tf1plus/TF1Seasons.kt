@@ -4,11 +4,16 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** SmartTV editorial lists expose seasonal replays absent from the flat replay query. */
-internal fun TF1Catalog.videosWithSeasons(slug: String, id: String): List<TF1Video> {
-    val seasons = try { editorialVideos(slug, id) } catch (_: Exception) { emptyList() }
-    if (seasons.isNotEmpty()) return seasons
-    return videos(slug)
-}
+internal fun TF1Catalog.videosWithSeasons(slug: String, id: String): List<TF1Video> =
+    TF1Diagnostics.trace(TF1Diagnostics.Operation.EPISODES) {
+        val seasons = try {
+            TF1Diagnostics.trace(TF1Diagnostics.Operation.EDITORIAL) { editorialVideos(slug, id) }
+        } catch (_: Exception) {
+            TF1Diagnostics.record(TF1Diagnostics.Event.EDITORIAL_FALLBACK)
+            emptyList()
+        }
+        if (seasons.isNotEmpty()) seasons else videos(slug)
+    }
 
 internal fun TF1Catalog.editorialVideos(slug: String, id: String): List<TF1Video> {
     val url = TF1Http.query("https://smart-tv.tf1.fr/catalog/fr-fr/smarttv", mapOf(
