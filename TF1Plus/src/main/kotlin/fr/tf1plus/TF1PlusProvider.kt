@@ -53,6 +53,7 @@ class TF1PlusProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse = withContext(Dispatchers.IO) {
+        TF1Diagnostics.record(TF1Diagnostics.Event.EPISODE_SELECTED)
         val path = url.substringBefore('?').trimEnd('/')
         val id = path.substringAfterLast('/')
         if ("/video/" in path) {
@@ -70,7 +71,10 @@ class TF1PlusProvider : MainAPI() {
                 episode = video.number
             }, fix = false)
         }
-        if (episodes.isEmpty()) throw ErrorLoadingException("Aucun replay disponible pour ce programme TF1+.")
+        if (episodes.isEmpty()) {
+            TF1Diagnostics.record(TF1Diagnostics.Event.NO_REPLAYS)
+            throw ErrorLoadingException("Aucun replay disponible pour ce programme TF1+.")
+        }
         newTvSeriesLoadResponse(programme?.title ?: slug.replace('-', ' '),
             url, TvType.TvSeries, episodes) {
             posterUrl = programme?.poster
@@ -82,11 +86,15 @@ class TF1PlusProvider : MainAPI() {
         data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
+        TF1Diagnostics.record(TF1Diagnostics.Event.PLAYBACK_REQUESTED)
         val stream = try {
-            TF1Runtime.playback.resolve(data)
+            TF1Diagnostics.trace(TF1Diagnostics.Operation.PLAYBACK) {
+                TF1Runtime.playback.resolve(data)
+            }
         } catch (error: Exception) {
             throw ErrorLoadingException("Lecture TF1+ indisponible : ${error.message ?: "erreur réseau"}")
         }
+        TF1Diagnostics.record(TF1Diagnostics.Event.MANIFEST_READY)
         val drm = newDrmExtractorLink(name, "TF1+ · Widevine", stream.manifest,
             ExtractorLinkType.DASH, WIDEVINE_UUID) {
             licenseUrl = stream.licenseUrl
@@ -96,6 +104,7 @@ class TF1PlusProvider : MainAPI() {
         }
         stream.subtitles.forEach { subtitleCallback(newSubtitleFile("Français", it)) }
         callback(drm)
+        TF1Diagnostics.record(TF1Diagnostics.Event.LINK_EMITTED)
         true
     }
 
