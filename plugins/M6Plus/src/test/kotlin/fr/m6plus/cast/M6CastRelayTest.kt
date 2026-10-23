@@ -53,6 +53,20 @@ class M6CastRelayTest {
         assertTrue(relay.isClosed)
     }
 
+    @Test fun `evicting the oldest session reports its URL so cached links can be dropped`() {
+        var time = 0L
+        val evicted = mutableListOf<String>()
+        M6CastRelay(localhost, localhost, now = { time }, onEvict = { evicted += it }).use { relay ->
+            val urls = (0 until 4).map { time++; relay.add(castManifest, "https://cdn.test/dash.mpd") { it } }
+            assertTrue(evicted.isEmpty())
+            time++
+            val fifth = relay.add(castManifest, "https://cdn.test/dash.mpd") { it }
+            assertEquals(listOf(urls.first()), evicted)
+            assertEquals(404, request(urls.first()).first)
+            assertEquals(200, request(fifth).first)
+        }
+    }
+
     @Test fun `license failure is observable without exposing upstream secrets`() {
         val events = java.util.concurrent.CopyOnWriteArrayList<M6Diagnostics.Event>()
         M6CastRelay(localhost, localhost, onEvent = { events += it }).use { relay ->

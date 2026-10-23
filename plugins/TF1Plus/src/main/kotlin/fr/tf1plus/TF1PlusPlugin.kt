@@ -47,6 +47,15 @@ internal object TF1Runtime {
         synchronized(RepoLinkGenerator.cache) { RepoLinkGenerator.cache.keys.removeAll { it.first == "TF1+" } }
     }
 
+    /** Standard Cast reuses cached links for 20 minutes, which can outlive an evicted relay session. */
+    fun forgetPlaybackLink(url: String) {
+        synchronized(RepoLinkGenerator.cache) {
+            RepoLinkGenerator.cache.entries.removeAll { (key, cache) ->
+                key.first == "TF1+" && synchronized(cache) { cache.linkCache.any { it.url == url } }
+            }
+        }
+    }
+
     fun close() {
         TF1Diagnostics.record(TF1Diagnostics.Event.PLUGIN_CLOSED)
         if (castManager.isInitialized()) castManager.value.close()
