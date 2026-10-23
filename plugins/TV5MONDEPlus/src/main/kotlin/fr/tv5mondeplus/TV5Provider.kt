@@ -2,19 +2,20 @@ package fr.tv5mondeplus
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class TV5Provider : MainAPI() {
-    override var name = "TV5MONDEplus"
+    override var name = TV5Runtime.NAME
     override var mainUrl = TV5Client.SITE
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override val hasMainPage = true
-    override val hasChromecastSupport = false
+    override val hasChromecastSupport = true
     override val hasDownloadSupport = false
     override val mainPage = mainPageOf("home" to "TV5MONDEplus")
-    private val client = TV5Client()
+    private val client = TV5Runtime.client
     private fun result(item: TV5Item): SearchResponse {
         val url = "$mainUrl/details/vod/redbee:${item.id}"
         return if (item.series) newTvSeriesSearchResponse(item.title, url, TvType.TvSeries) { posterUrl = item.poster }
@@ -42,8 +43,22 @@ class TV5Provider : MainAPI() {
     }
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit): Boolean = withContext(Dispatchers.IO) {
-        if (isCasting) throw ErrorLoadingException("TV5MONDEplus Chromecast playback is not supported yet.")
         val stream = client.playback(data)
+        // Unprotected DASH needs no headers, so the TV can fetch it directly.
+        if ((isCasting || TV5Runtime.castConnected) && stream.license != null) {
+            val url = try { TV5Runtime.cast.link(stream) }
+                catch (error: CancellationException) { throw error }
+                catch (_: Exception) {
+                    val message = "TV5MONDEplus Chromecast relay failed. Keep the phone on the TV's network and retry."
+                    TV5Runtime.castMessage(message)
+                    throw ErrorLoadingException(message)
+                }
+            // CloudStream shares cached links between local playback and Cast.
+            callback(newDrmExtractorLink(name, "TV5MONDEplus · Direct Chromecast", url, ExtractorLinkType.DASH, WIDEVINE_UUID) {
+                licenseUrl = url.substringBeforeLast('/') + "/license"
+            })
+            return@withContext true
+        }
         if (stream.license != null) callback(newDrmExtractorLink(name, "TV5MONDEplus · Widevine", stream.url, ExtractorLinkType.DASH, WIDEVINE_UUID) {
             licenseUrl = stream.license
         }) else callback(newExtractorLink(name, name, stream.url, ExtractorLinkType.DASH))
