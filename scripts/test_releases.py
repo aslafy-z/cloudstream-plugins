@@ -120,6 +120,42 @@ class ReleaseTests(unittest.TestCase):
             r.write_channel("stable", [entry()], "abc")
         self.assertEqual(set(captured), {"plugins.json", "repo.json"})
 
+    def publish_with_dev(self, dev_entry, dev_fingerprint, version=40):
+        with tempfile.TemporaryDirectory() as directory:
+            r.write_json(Path(directory) / "dist/release-plan.json", {"source": "abc", "version": version,
+                "builds": [{"name": "M6Plus", "tag": f"M6Plus-v2026.10.23.{version}", "fingerprint": "new"}]})
+            (Path(directory) / "dist/M6Plus").mkdir()
+            published = {"source": "abc", "fingerprint": "new", "plugin": entry(version=version)}
+            with patch.object(r, "ROOT", Path(directory)), \
+                 patch.object(r, "read_channel", return_value=[dev_entry]), \
+                 patch.object(r, "asset", return_value=r.encoded({"fingerprint": dev_fingerprint})), \
+                 patch.object(r, "verify_bundle", return_value=published), \
+                 patch.object(r, "release_info", return_value=None), \
+                 patch.object(r, "verified_release", return_value=published), \
+                 patch.object(r, "command") as command, patch.object(r, "write_channel") as write:
+                r.publish(argparse.Namespace())
+            return command, write
+
+    def test_publish_skips_build_another_run_already_released(self):
+        command, write = self.publish_with_dev(entry(version=38), "new")
+        command.assert_not_called()
+        write.assert_not_called()
+
+    def test_publish_releases_changed_build(self):
+        command, write = self.publish_with_dev(entry(version=38), "old")
+        self.assertEqual(command.call_args.args[:4], ("gh", "release", "create", "M6Plus-v2026.10.23.40"))
+        self.assertEqual(write.call_args.args[1], [entry(version=40)])
+
+    def test_publish_rerun_reuses_its_own_release(self):
+        command, write = self.publish_with_dev(entry(version=40), "new")
+        command.assert_called_once()
+        write.assert_not_called()
+
+    def test_publish_never_moves_dev_backwards(self):
+        command, write = self.publish_with_dev(entry(version=41), "old")
+        command.assert_not_called()
+        write.assert_not_called()
+
     def test_fingerprints_ignore_other_plugins_and_docs_but_include_shared_build(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
