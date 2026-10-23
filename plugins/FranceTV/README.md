@@ -12,6 +12,7 @@ Targets CloudStream 4.8.0 APIs. See [compatibility and tested builds](../../READ
 - Load programme seasons and paginated episode lists, preserving official episode numbers.
 - Exclude live entries, extracts, unpublished videos and recommendation shelves from episode lists.
 - Resolve authorized DASH and HLS streams, with a separate Widevine path for protected DASH.
+- Direct Chromecast playback, with a local manifest and license relay for protected DASH.
 - Cache catalogue responses in memory for 10 minutes; CloudStream manages image caching.
 
 ## Sign in
@@ -20,7 +21,15 @@ The plugin uses replay endpoints that do not require a saved account. Account si
 
 ## Chromecast
 
-Chromecast is not enabled in this initial version. The protected DASH path needs receiver-side license-header handling before it can be validated for Cast.
+The episode menu offers one action:
+
+| Action | Usage |
+| --- | --- |
+| **france.tv direct Chromecast (relay)** | Connect using CloudStream's Cast button first. Keep the app open and the phone on the TV's network. For protected replays, the phone relays the manifest and licenses while the TV downloads video segments directly. Unprotected replays are sent to the TV as is. |
+
+CloudStream's standard **Cast episode** and **Cast mirror** actions also receive relay links for protected replays. Some versions have an episode-index bug on later seasons. An [upstream fix](https://github.com/recloudstream/cloudstream/pull/3275) and a [validated test APK](https://github.com/aslafy-z/cloudstream/releases/tag/cloudstream-castfix-1) are available. The plugin's direct action works independently of that host bug.
+
+Relay failures are shown as a toast and as the link loading error. The official france.tv Cast receiver is not implemented.
 
 ## Diagnostics
 
@@ -32,11 +41,29 @@ Catalogue and search use the Yatta mobile API. Replay resolution uses `k7.ftven.
 
 For protected DASH, the client requests a Widevine authorization token and attaches it to the player's license request parameters. The device's CDM performs license acquisition. The plugin does not extract encryption keys. Audio and subtitle tracks embedded in the manifest remain available to the player.
 
+### Chromecast relay
+
+CloudStream's standard Cast path sends the TV only a URL and content type. The france.tv license server needs an `nv-authorizations` token plus `Origin`, `Referer` and `User-Agent` headers, which the receiver cannot add. For protected DASH:
+
+1. CloudStream connects to its standard Cast receiver.
+2. The plugin resolves the replay and fetches its DASH manifest with the client `User-Agent`.
+3. The manifest gets an absolute `BaseURL` to the tokenized CDN path and advertises a local license URL through `dashif:Laurl` and `ms:laurl`.
+4. Each CDM challenge is posted to `api-drm.ftven.fr` with the token and headers. The service answers with the raw license, which is returned unchanged. Redirects are rejected.
+5. Chromecast acquires the license with its own Widevine CDM and downloads segments directly from the CDN.
+
+The relay binds to the network interface used to reach the TV and accepts only the connected TV and the phone itself. Session paths use random identifiers and contain no tokens. Request bodies are limited to 64 KiB, headers and connections are bounded, at most four sessions are kept, and sessions expire after six hours without requests. Ending the Cast session or unloading the plugin closes the server.
+
+CloudStream shares its link cache between local playback and Cast. The plugin invalidates only its own entries when Cast sessions change or a relay session is evicted. While the standard receiver is connected, relay links also carry the DRM configuration needed by the local player.
+
+Unprotected replays are not relayed. The authorized CDN URL carries its token in the path, so the TV fetches the manifest and segments itself, without the `User-Agent` that local playback sends. **france.tv direct Chromecast (relay)** sends `RemoteMediaClient.load` with one DASH or HLS media item and the resume position. It does not automatically play the next episode.
+
 ## Status and limitations
 
 Live API checks verified channel shelves, search, all six seasons of Astrid et Raphaëlle, replay resolution and manifest access. Search, season navigation and visible Astrid et Raphaëlle replay playback were also verified inside CloudStream on a Pixel 7a emulator. That replay was unprotected DASH, so this does not validate Widevine license acquisition.
 
-Protected playback, physical-device behavior, Chromecast, account-only programmes, live TV and downloads are not validated or supported as noted above. The home page shows each shelf's initial selection. Unofficial endpoints may change.
+Chromecast playback has not been validated on a physical Chromecast, for protected or unprotected replays. Probes from outside France were geo-blocked at the CDN (HTTP 403), so it is unconfirmed whether segments load without the client `User-Agent` and whether the CDN sends `Access-Control-Allow-Origin` on successful responses; its error responses do carry other CORS headers. The license endpoint answered a service-certificate request with raw `application/octet-stream` and CORS for `https://www.france.tv`. Encrypted HLS is not supported.
+
+Protected playback, physical-device behavior, account-only programmes, live TV and downloads are not validated or supported as noted above. The home page shows each shelf's initial selection. Unofficial endpoints may change.
 
 ## Development
 
@@ -46,7 +73,7 @@ From the repository root:
 ./gradlew --no-daemon FranceTV:testDebugUnitTest FranceTV:make
 ```
 
-Tests cover episode numbering, poster preference, catalogue filtering and exclusion of recommendation shelves. They do not replace device playback testing.
+Tests use synthetic data and cover episode numbering, poster preference, catalogue filtering, exclusion of recommendation shelves, manifest rewriting, license forwarding, Cast requests and relay access restrictions. They do not replace device playback testing.
 
 ## Sources and credits
 
@@ -55,4 +82,5 @@ Most of the API research and replay integration work comes from [Catch-up TV & M
 ### Additional references
 
 - [france.tv](https://www.france.tv/)
+- [Google Cast DRM license declarations](https://developers.google.com/cast/docs/media/streaming_protocols#drm)
 - [License](../../LICENSE)
