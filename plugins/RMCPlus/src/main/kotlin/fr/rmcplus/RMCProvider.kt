@@ -2,6 +2,7 @@ package fr.rmcplus
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
@@ -15,7 +16,7 @@ class RMCProvider : MainAPI() {
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override val hasMainPage = true
-    override val hasChromecastSupport = false
+    override val hasChromecastSupport = true
     override val hasDownloadSupport = false
     override val mainPage = mainPageOf("accueil" to "RMC+", "rmc-story" to "RMC Story", "rmc-decouverte" to "RMC Découverte", "rmc-life" to "RMC Life")
     private val client get() = RMCRuntime.client
@@ -47,8 +48,25 @@ class RMCProvider : MainAPI() {
     }
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit): Boolean = withContext(Dispatchers.IO) {
-        if (isCasting) throw ErrorLoadingException("RMC+ Chromecast playback is not supported yet.")
         val stream = client.playback(data, RMCRuntime.auth)
+        if (isCasting || RMCRuntime.castConnected) {
+            try { RMCRuntime.requireCastable(stream) }
+            catch (error: ErrorLoadingException) { RMCRuntime.castMessage(RMCCastRoute.UNSUPPORTED); throw error }
+            val url = try { RMCRuntime.castUrl(stream) }
+                catch (error: CancellationException) { throw error }
+                catch (_: Exception) {
+                    val stage = RMCDiagnostics.failed()
+                    val message = "Chromecast relay failed ($stage). Check Plugin diagnostics in the RMC+ settings."
+                    RMCRuntime.castMessage(message)
+                    throw ErrorLoadingException(message)
+                }
+            // CloudStream shares cached links between local playback and Cast.
+            callback(if (stream.token == null) newExtractorLink(name, name, url, if (stream.dash) ExtractorLinkType.DASH else ExtractorLinkType.M3U8)
+                else newDrmExtractorLink(name, "RMC+ · Direct Chromecast", url, ExtractorLinkType.DASH, WIDEVINE_UUID) {
+                    licenseUrl = url.substringBeforeLast('/') + "/license"
+                })
+            return@withContext true
+        }
         val type = if (stream.dash) ExtractorLinkType.DASH else ExtractorLinkType.M3U8
         val link = if (stream.token != null) newDrmExtractorLink(name, "RMC+ · Widevine", stream.url, type, WIDEVINE_UUID) {
             licenseUrl = RMCClient.LICENSE
