@@ -6,5 +6,5 @@ import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
 class T18Plugin : Plugin() {
-    override fun load(context: Context) { registerMainAPI(T18Provider()) }
+    override fun load(context: Context) { registerMainAPI(T18Provider()); registerVideoClickAction(T18DirectCastAction()) }
 }

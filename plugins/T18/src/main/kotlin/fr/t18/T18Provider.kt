@@ -11,7 +11,7 @@ class T18Provider : MainAPI() {
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override val hasMainPage = true
-    override val hasChromecastSupport = false
+    override val hasChromecastSupport = true
     override val hasDownloadSupport = false
     override val mainPage = mainPageOf("home" to "T18")
     private val client = T18Client()
@@ -38,9 +38,9 @@ class T18Provider : MainAPI() {
     }
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit): Boolean = withContext(Dispatchers.IO) {
-        if (isCasting) throw ErrorLoadingException("T18 Chromecast playback is not supported yet.")
         val stream = client.playback(data)
-        stream.subtitles.forEach { (language, url) -> subtitleCallback(newSubtitleFile(language, url) { headers = T18Client.MEDIA_HEADERS }) }
+        // Dailymotion sidecar subtitles are SRT, which Cast receivers cannot render; the HLS master carries WebVTT renditions.
+        if (!isCasting) stream.subtitles.forEach { (language, url) -> subtitleCallback(newSubtitleFile(language, url) { headers = T18Client.MEDIA_HEADERS }) }
         callback(newExtractorLink(name, name, stream.url, ExtractorLinkType.M3U8) { headers = T18Client.MEDIA_HEADERS })
         true
     }
