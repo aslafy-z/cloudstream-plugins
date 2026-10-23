@@ -236,11 +236,27 @@ def package(args):
         (target / "SHA256SUMS").write_text("".join(f"{sha256(path.read_bytes())}  {path.name}\n" for path in sorted(target.iterdir())))
 
 
+def superseded(previous, build, version):
+    """Runs plan concurrently against one Dev snapshot; publication is serialized, so re-check before releasing."""
+    if previous is None:
+        return False
+    if previous["version"] > version:
+        return True
+    # A rerun of this same run must still reach its existing release.
+    return previous["version"] != version and \
+        json.loads(asset(entry_tag(previous), "build.json")).get("fingerprint") == build["fingerprint"]
+
+
 def publish(args):
     directory = ROOT / "dist"
     plan = json.loads((directory / "release-plan.json").read_text())
+    dev = read_channel("dev")
+    current = {item["internalName"]: item for item in dev}
     incoming = []
     for build in plan["builds"]:
+        if superseded(current.get(build["name"]), build, plan["version"]):
+            print("Already in Dev:", build["name"])
+            continue
         target, tag = directory / build["name"], build["tag"]
         metadata = verify_bundle(target)
         existing = release_info(tag)
@@ -254,9 +270,8 @@ def publish(args):
             raise ValueError("Existing release belongs to a different source/build")
         incoming.append(published["plugin"])
     if incoming:
-        current = read_channel("dev")
-        merged = merge_entries(current, incoming)
-        if current != merged:
+        merged = merge_entries(dev, incoming)
+        if dev != merged:
             write_channel("dev", merged, plan["source"])
 
 
