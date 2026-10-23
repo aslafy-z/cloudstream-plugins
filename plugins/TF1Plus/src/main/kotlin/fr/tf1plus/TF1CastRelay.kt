@@ -22,6 +22,8 @@ internal class TF1CastRelay(
     private val now: () -> Long = System::nanoTime,
     private val ttlNanos: Long = TimeUnit.HOURS.toNanos(6),
     private val onEvent: (TF1Diagnostics.Event) -> Unit = {},
+    /** Receives the manifest URL of a session dropped to make room, so cached links to it can be invalidated. */
+    private val onEvict: (String) -> Unit = {},
 ) : Closeable {
     private class Session(val manifest: ByteArray, val license: (ByteArray) -> ByteArray, @Volatile var touched: Long)
     private val daemon = ThreadFactory { job -> Thread(job, "TF1Cast").apply { isDaemon = true } }
@@ -51,7 +53,10 @@ internal class TF1CastRelay(
         check(!isClosed) { "The Chromecast session has ended." }
         val id = UUID.randomUUID().toString()
         val manifest = TF1CastManifest.rewrite(xml, origin, "$base/$id/license")
-        if (sessions.size >= 4) sessions.entries.minByOrNull { it.value.touched }?.let { sessions.remove(it.key) }
+        if (sessions.size >= 4) sessions.entries.minByOrNull { it.value.touched }?.let {
+            sessions.remove(it.key)
+            onEvict("$base/${it.key}/manifest.mpd")
+        }
         sessions[id] = Session(manifest, license, now())
         return "$base/$id/manifest.mpd"
     }

@@ -86,7 +86,8 @@ internal class TF1CastManager(private val context: Context) {
                 check(generation == expected && connected) { "The Chromecast session has ended. Reconnect to Cast." }
                 if (peer != address || relay?.isClosed != false) {
                     relay?.close()
-                    relay = TF1CastRelay(local, address, onEvent = TF1Diagnostics::record)
+                    relay = TF1CastRelay(local, address, onEvent = TF1Diagnostics::record,
+                        onEvict = TF1Runtime::forgetPlaybackLink)
                     peer = address
                 }
                 TF1Diagnostics.record(TF1Diagnostics.Event.REWRITE)

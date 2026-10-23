@@ -88,7 +88,8 @@ internal class M6CastManager(private val context: Context, private val playback:
                 check(generation == expected && connected) { "The Chromecast session has ended. Reconnect to Cast." }
                 if (peer != address || relay?.isClosed != false) {
                     relay?.close()
-                    relay = M6CastRelay(local, address, onEvent = M6Diagnostics::record)
+                    relay = M6CastRelay(local, address, onEvent = M6Diagnostics::record,
+                        onEvict = fr.m6plus.M6Runtime::forgetPlaybackLink)
                     peer = address
                 }
                 M6Diagnostics.record(M6Diagnostics.Event.REWRITE)

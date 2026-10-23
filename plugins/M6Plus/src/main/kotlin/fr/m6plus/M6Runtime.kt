@@ -42,6 +42,15 @@ internal object M6Runtime {
         synchronized(RepoLinkGenerator.cache) { RepoLinkGenerator.cache.keys.removeAll { it.first == "M6+" } }
     }
 
+    /** Standard Cast reuses cached links for 20 minutes, which can outlive an evicted relay session. */
+    fun forgetPlaybackLink(url: String) {
+        synchronized(RepoLinkGenerator.cache) {
+            RepoLinkGenerator.cache.entries.removeAll { (key, cache) ->
+                key.first == "M6+" && synchronized(cache) { cache.linkCache.any { it.url == url } }
+            }
+        }
+    }
+
     fun stopCast() {
         clearPlaybackCache()
         if (castManager.isInitialized()) castManager.value.stop()
