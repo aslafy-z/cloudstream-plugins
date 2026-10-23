@@ -139,7 +139,7 @@ class RMCSettingsFragment : DialogFragment() {
                 Thread {
                     val result = try {
                         RMCRuntime.auth.signIn(address, secret)
-                        RMCRuntime.clearPlaybackCache()
+                        RMCRuntime.stopCast()
                         "Signed in to RMC+."
                     } catch (error: RMCException) {
                         error.message ?: "RMC+ sign-in failed."
@@ -157,7 +157,7 @@ class RMCSettingsFragment : DialogFragment() {
             }
             disconnect.setOnClickListener {
                 RMCRuntime.auth.signOut()
-                RMCRuntime.clearPlaybackCache()
+                RMCRuntime.stopCast()
                 email.text.clear()
                 password.text.clear()
                 status.text = "Signed out of RMC+."
