@@ -38,7 +38,9 @@ jobs:
           REBUILD_PLUGINS: ${{ inputs.rebuild || false }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: python3 scripts/releases.py plan --run "$GITHUB_RUN_ID" --version "$PLUGIN_BUILD_VERSION" --sha "$GITHUB_SHA"
+          # Pull request runs check out a merge commit; the run records the PR head instead.
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/releases.py plan --run "$GITHUB_RUN_ID" --version "$PLUGIN_BUILD_VERSION" --sha "$HEAD_SHA"
       - name: Test and build all plugins
         run: ./gradlew --no-daemon testDebugUnitTest make makePluginsJson
       - name: Package affected plugins
