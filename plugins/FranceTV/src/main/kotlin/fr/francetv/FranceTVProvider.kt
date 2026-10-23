@@ -2,6 +2,7 @@ package fr.francetv
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -12,11 +13,11 @@ class FranceTVProvider : MainAPI() {
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override val hasMainPage = true
-    override val hasChromecastSupport = false
+    override val hasChromecastSupport = true
     override val hasDownloadSupport = false
     override val mainPage = mainPageOf("france-2" to "France 2", "france-3" to "France 3", "france-4" to "France 4",
         "france-5" to "France 5", "franceinfo" to "franceinfo", "slash" to "France tv Slash")
-    private val client = FranceTVClient()
+    private val client = FranceTVRuntime.client
     private fun result(item: FTVItem): SearchResponse {
         val url = "$mainUrl/${if (item.program) "programmes" else "video"}/${item.id}"
         return if (item.program) newTvSeriesSearchResponse(item.title, url, TvType.TvSeries) { posterUrl = item.poster }
@@ -47,8 +48,19 @@ class FranceTVProvider : MainAPI() {
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit): Boolean = withContext(Dispatchers.IO) {
         val stream = client.playback(data)
-        if (stream.license != null) {
-            if (isCasting) throw ErrorLoadingException("france.tv Widevine Chromecast playback is not supported yet.")
+        if (stream.license != null && (isCasting || FranceTVRuntime.castConnected)) {
+            val url = try { FranceTVRuntime.cast.link(stream) }
+                catch (error: CancellationException) { throw error }
+                catch (error: Exception) {
+                    val message = FranceTVRuntime.castFailure(error)
+                    FranceTVRuntime.castMessage(message)
+                    throw ErrorLoadingException(message)
+                }
+            // CloudStream shares cached links between local playback and Cast.
+            callback(newDrmExtractorLink(name, "france.tv · Direct Chromecast", url, ExtractorLinkType.DASH, WIDEVINE_UUID) {
+                licenseUrl = url.substringBeforeLast('/') + "/license"
+            })
+        } else if (stream.license != null) {
             callback(newDrmExtractorLink(name, "france.tv · Widevine", stream.url, ExtractorLinkType.DASH, WIDEVINE_UUID) {
                 licenseUrl = stream.license
                 keyRequestParameters = HashMap(stream.headers)

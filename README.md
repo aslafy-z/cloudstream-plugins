@@ -30,7 +30,7 @@ To change channels, remove the installed plugins and their repository, then inst
 
 Requires Android 6 (API 23) or newer. The plugins target CloudStream 4.8.0 APIs. Its stable release includes the DRM links, player interceptors and plugin settings used here.
 
-Runtime playback tests currently use `4.8.0-PRE-castfix.1`, which includes the Chromecast episode-index correction from [CloudStream PR #3275](https://github.com/recloudstream/cloudstream/pull/3275). A [validated test APK and corresponding source](https://github.com/aslafy-z/cloudstream/releases/tag/cloudstream-castfix-1) are available. The patch addresses the standard **Cast episode** and **Cast mirror** actions on later seasons; M6+ and TF1+ also provide direct Cast actions that work independently of this host bug. The stable 4.8.0 APK has not been tested with every plugin.
+Runtime playback tests currently use `4.8.0-PRE-castfix.1`, which includes the Chromecast episode-index correction from [CloudStream PR #3275](https://github.com/recloudstream/cloudstream/pull/3275). A [validated test APK and corresponding source](https://github.com/aslafy-z/cloudstream/releases/tag/cloudstream-castfix-1) are available. The patch addresses the standard **Cast episode** and **Cast mirror** actions on later seasons; M6+, TF1+ and france.tv also provide direct Cast actions that work independently of this host bug. The stable 4.8.0 APK has not been tested with every plugin.
 
 See each plugin's README for its Android requirement and verified playback paths.
 
@@ -41,7 +41,7 @@ See each plugin's README for its Android requirement and verified playback paths
 | [M6Plus](plugins/M6Plus/README.md) | M6, W9, 6ter and Gulli replays with search, subtitles, Widevine and Chromecast |
 | [TF1Plus](plugins/TF1Plus/README.md) | TF1+, TMC, TFX, TF1 Series Films and LCI replays with search, account settings, Widevine and Chromecast |
 | [ARTE](plugins/ARTE/README.md) | ARTE documentaries, films, series and concerts with search and multilingual HLS playback |
-| [FranceTV](plugins/FranceTV/README.md) | france.tv channel shelves, search, seasons and direct DASH/HLS replay playback |
+| [FranceTV](plugins/FranceTV/README.md) | france.tv channel shelves, search, seasons, DASH/HLS replay playback, Widevine and Chromecast |
 | [RMCPlus](plugins/RMCPlus/README.md) | RMC+ channel shelves, search, encrypted account settings and Widevine replay playback |
 | [TV5MONDEPlus](plugins/TV5MONDEPlus/README.md) | TV5MONDEplus films and series with search, anonymous access and Widevine playback |
 | [Novo19](plugins/Novo19/README.md) | NOVO19 categories, catalogue search, series and anonymous Widevine playback |
