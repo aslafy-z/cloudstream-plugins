@@ -45,7 +45,7 @@ See each plugin's README for its Android requirement and verified playback paths
 | [RMCPlus](plugins/RMCPlus/README.md) | RMC+ channel shelves, search, encrypted account settings and Widevine replay playback |
 | [TV5MONDEPlus](plugins/TV5MONDEPlus/README.md) | TV5MONDEplus films and series with search, anonymous access and Widevine playback |
 | [Novo19](plugins/Novo19/README.md) | NOVO19 categories, catalogue search, series and anonymous Widevine playback |
-| [T18](plugins/T18/README.md) | T18 programme categories, catalogue search and Dailymotion HLS replays |
+| [T18](plugins/T18/README.md) | T18 programme categories, catalogue search, Dailymotion HLS replays and Chromecast |
 
 See each plugin's README for account setup and troubleshooting.
 

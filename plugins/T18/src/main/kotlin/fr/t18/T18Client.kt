@@ -15,7 +15,7 @@ internal data class T18Details(val item: T18Item, val episodes: List<T18Item>, v
 internal data class T18Stream(val url: String, val subtitles: List<Pair<String, String>>)
 internal fun JSONObject.text(key: String): String? = optString(key).takeIf { it.isNotBlank() && it != "null" }
 internal fun JSONArray?.objects(): List<JSONObject> = if (this == null) emptyList() else (0 until length()).mapNotNull(::optJSONObject)
-internal class T18Client {
+internal class T18Client(private val http: OkHttpClient = OkHttpClient.Builder().callTimeout(30, TimeUnit.SECONDS).build()) {
     companion object {
         const val SITE = "https://t18.fr"
         const val UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"
@@ -44,12 +44,27 @@ internal class T18Client {
             .reversed().sortedBy { it.date.orEmpty() }
         fun videoId(html: String) = Jsoup.parse(html).selectFirst("[data-dailymotion-video-id]")?.attr("data-dailymotion-video-id")
             ?.takeIf { Regex("[A-Za-z0-9]+").matches(it) }
+        fun variant(master: String, base: String): String? = master.lineSequence().map(String::trim)
+            .dropWhile { !it.startsWith("#EXT-X-STREAM-INF:") }.firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+            ?.let { base.toHttpUrl().resolve(it) }?.takeIf { it.isHttps || !base.toHttpUrl().isHttps }?.toString()
+        fun fragmented(media: String) = media.lineSequence().any { it.trim().startsWith("#EXT-X-MAP:") }
     }
-    private val http = OkHttpClient.Builder().callTimeout(30, TimeUnit.SECONDS).build()
     private val cache = LinkedHashMap<String, Pair<Long, String>>()
     private fun request(request: Request): String = http.newCall(request.newBuilder().header("User-Agent", UA).build()).execute().use {
         if (!it.isSuccessful) throw IOException("T18 request failed (HTTP ${it.code}).")
         it.body?.string() ?: throw IOException("T18 returned an empty response.")
+    }
+    private fun playlist(url: String): Pair<String, String> = http.newCall(Request.Builder().url(url)
+        .apply { MEDIA_HEADERS.forEach { (name, value) -> header(name, value) } }.build()).execute().use {
+        if (!it.isSuccessful) throw IOException("Dailymotion playlist request failed (HTTP ${it.code}).")
+        val source = it.body?.source() ?: throw IOException("Dailymotion returned an empty playlist.")
+        if (source.request(1_048_577)) throw IOException("The Dailymotion playlist is too large.")
+        source.readUtf8() to it.request.url.toString()
+    }
+    /** Cast receivers assume MPEG-TS HLS segments unless told otherwise. */
+    fun fragmentedHls(manifest: String): Boolean {
+        val (master, base) = playlist(manifest)
+        return fragmented(playlist(variant(master, base) ?: return fragmented(master)).first)
     }
     private fun get(path: String): String {
         val url = address(path)
