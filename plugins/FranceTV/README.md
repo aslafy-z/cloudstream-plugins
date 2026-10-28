@@ -27,7 +27,7 @@ The episode menu offers one action:
 | --- | --- |
 | **france.tv direct Chromecast (relay)** | Connect using CloudStream's Cast button first. Keep the app open and the phone on the TV's network. For protected replays, the phone relays the manifest and licenses while the TV downloads video segments directly. Unprotected replays are sent to the TV as is. |
 
-CloudStream's standard **Cast episode** and **Cast mirror** actions also receive relay links for protected replays. Some versions have an episode-index bug on later seasons. An [upstream fix](https://github.com/recloudstream/cloudstream/pull/3275) and a [validated test APK](https://github.com/aslafy-z/cloudstream/releases/tag/cloudstream-castfix-1) are available. The plugin's direct action works independently of that host bug.
+CloudStream's standard **Cast episode** and **Cast mirror** actions also receive relay links for protected replays. Some versions have an episode-index bug on later seasons. The [upstream fix](https://github.com/recloudstream/cloudstream/pull/3275) ships in the [CloudStream pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release). The plugin's direct action works independently of that host bug.
 
 Relay failures are shown as a toast and as the link loading error. The official france.tv Cast receiver is not implemented.
 
