@@ -30,7 +30,7 @@ To change channels, remove the installed plugins and their repository, then inst
 
 Requires Android 6 (API 23) or newer. The plugins target CloudStream 4.8.0 APIs. Its stable release includes the DRM links, player interceptors and plugin settings used here.
 
-The Chromecast episode-index correction from [CloudStream PR #3275](https://github.com/recloudstream/cloudstream/pull/3275) is merged upstream and ships in the [CloudStream pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release). Runtime playback tests currently use `4.8.0-PRE-castfix.1`, a build with the same fix. The patch addresses the standard **Cast episode** and **Cast mirror** actions on later seasons; M6+, TF1+, RMC+, NOVO19, france.tv and TV5MONDEplus also provide direct Cast actions that work independently of this host bug. The stable 4.8.0 APK has not been tested with every plugin.
+The Chromecast episode-index correction from [CloudStream PR #3275](https://github.com/recloudstream/cloudstream/pull/3275) is merged upstream and ships in the [CloudStream pre-release](https://github.com/recloudstream/cloudstream/releases/tag/pre-release). The patch addresses the standard **Cast episode** and **Cast mirror** actions on later seasons; M6+, TF1+, RMC+, NOVO19, france.tv and TV5MONDEplus also provide direct Cast actions that work independently of this host bug. The stable 4.8.0 APK has not been tested with every plugin.
 
 See each plugin's README for its Android requirement and verified playback paths.
 
