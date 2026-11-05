@@ -28,6 +28,17 @@ internal class RMCClient {
             require(url.scheme == "https" && url.host == "bff.rmcplus.fr" && url.port == 443 && url.encodedPath.startsWith("/v1/")) { "Invalid RMC+ endpoint." }
             return url.newBuilder().setQueryParameter("model", "androidtv-ott").build().toString()
         }
+        /** RMC+ sign-in answers HTTP 400 with an AWS Cognito error type when it refuses credentials. */
+        fun signInRejection(body: String): String? = runCatching { JSONObject(body).text("__type") }.getOrNull()
+            ?.substringAfterLast('#')
+        fun signInFailure(status: Int, rejection: String?): String = when (rejection) {
+            "NotAuthorizedException" -> "Incorrect RMC+ email address or password."
+            "UserNotFoundException" -> "No RMC+ account uses this email address."
+            "UserNotConfirmedException" -> "This RMC+ account is not activated yet. Confirm it from the RMC+ email."
+            "PasswordResetRequiredException" -> "RMC+ requires a password reset for this account. Reset it on rmcplus.fr."
+            "TooManyRequestsException", "LimitExceededException" -> "Too many RMC+ sign-in attempts. Wait a few minutes and try again."
+            else -> "RMC+ sign-in failed (HTTP $status)."
+        }
         fun item(json: JSONObject): RMCItem? {
             val path = json.optJSONArray("call_to_actions").objects().mapNotNull { it.text("endpoint") }
                 .firstOrNull { it.startsWith("/page?") } ?: return null
@@ -77,8 +88,18 @@ internal class RMCClient {
         }
         val id = clientId ?: throw IOException("RMC+ login configuration is unavailable.")
         val body = JSONObject().put("email", email).put("password", password).put("clientId", id).toString()
-        val response = JSONObject(execute(Request.Builder().url("https://connect.rmcbfm.com/api/sign-in?model=androidtv-ott")
-            .post(body.toRequestBody("application/json".toMediaType())).build()))
+        val request = Request.Builder().url("https://connect.rmcbfm.com/api/sign-in?model=androidtv-ott")
+            .header("User-Agent", UA).post(body.toRequestBody("application/json".toMediaType())).build()
+        val raw = http.newCall(request).execute().use {
+            val text = it.body?.string().orEmpty()
+            if (!it.isSuccessful) {
+                val rejection = signInRejection(text)
+                rejection?.let { type -> RMCDiagnostics.record("Sign-in rejected by RMC+: $type") }
+                throw RMCException(it.code, signInFailure(it.code, rejection))
+            }
+            text
+        }
+        val response = JSONObject(raw)
         return response.optJSONObject("AuthenticationResult")?.text("IdToken") ?: throw RMCException(401, "RMC+ sign-in failed. Check your credentials.")
     }
     fun home(id: String, number: Int) = RMCDiagnostics.trace("Load catalogue") {

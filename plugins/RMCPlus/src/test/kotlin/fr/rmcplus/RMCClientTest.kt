@@ -20,6 +20,18 @@ class RMCClientTest {
         val items = RMCClient.episodes(sections)
         assertEquals(listOf(1, 2), items.map { it.season })
     }
+    @Test fun `sign-in rejections explain why RMC refused the account`() {
+        // Body returned by connect.rmcbfm.com for an unknown account.
+        val unknown = RMCClient.signInRejection("""{"__type":"UserNotFoundException","message":"User does not exist."}""")
+        assertEquals("UserNotFoundException", unknown)
+        assertEquals("No RMC+ account uses this email address.", RMCClient.signInFailure(400, unknown))
+        val wrongPassword = RMCClient.signInRejection("""{"__type":"com.amazonaws#NotAuthorizedException","message":"Incorrect username or password."}""")
+        assertEquals("Incorrect RMC+ email address or password.", RMCClient.signInFailure(400, wrongPassword))
+        val malformed = RMCClient.signInRejection("""{"code":"BAD_REQUEST","errors":[{"field":"clientId","code":"REQUIRED"}]}""")
+        assertNull(malformed)
+        assertEquals("RMC+ sign-in failed (HTTP 400).", RMCClient.signInFailure(400, malformed))
+        assertNull(RMCClient.signInRejection("<html>"))
+    }
     @Test fun `authenticated endpoints cannot leave RMC API origin`() {
         listOf("https://evil.test/v1/page", "http://bff.rmcplus.fr/v1/page", "https://bff.rmcplus.fr:444/v1/page", "https://bff.rmcplus.fr/other").forEach {
             assertThrows(IllegalArgumentException::class.java) { RMCClient.endpoint(it) }
