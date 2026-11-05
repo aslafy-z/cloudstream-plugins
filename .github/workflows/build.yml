@@ -41,6 +41,20 @@ jobs:
           # Pull request runs check out a merge commit; the run records the PR head instead.
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/releases.py plan --run "$GITHUB_RUN_ID" --version "$PLUGIN_BUILD_VERSION" --sha "$HEAD_SHA"
+      # The CloudStream Gradle plugin is a JitPack -SNAPSHOT. JitPack sometimes lists a new
+      # snapshot before it serves its files, so configuring the build fails for a few minutes.
+      # Only this configuration step is retried; tests and packaging below run once.
+      - name: Resolve Gradle build plugins
+        run: |
+          for attempt in 1 2 3; do
+            if [ "$attempt" -eq 1 ]; then refresh=""; else refresh="--refresh-dependencies"; fi
+            if ./gradlew --no-daemon $refresh help; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::Gradle configuration failed (attempt $attempt of 3), retrying in 60s"
+              sleep 60
+            fi
+          done
+          exit 1
       - name: Test and build all plugins
         run: ./gradlew --no-daemon testDebugUnitTest make makePluginsJson
       - name: Package affected plugins
