@@ -101,10 +101,11 @@ class RMCSettingsFragment : DialogFragment() {
             isSingleLine = true
             isSaveEnabled = false
         }
+        markCredentialFields(email, password)
         layout.addView(status)
         layout.addView(email)
         layout.addView(password)
-        layout.addView(Button(context).apply {
+        val diagnostics = Button(context).apply {
             text = "Plugin diagnostics"
             setOnClickListener {
                 val report = RMCDiagnostics.report()
@@ -114,7 +115,8 @@ class RMCSettingsFragment : DialogFragment() {
                     .setNegativeButton("Clear") { _, _ -> RMCDiagnostics.clear() }
                     .show()
             }
-        })
+        }
+        layout.addView(diagnostics)
         val dialog = AlertDialog.Builder(context).setTitle("RMC+").setView(layout)
             .setPositiveButton("Sign in", null)
             .setNeutralButton("Sign out", null)
@@ -124,6 +126,7 @@ class RMCSettingsFragment : DialogFragment() {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             val connect = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val disconnect = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            chainFormFocus(email, password, diagnostics, connect)
             connect.setOnClickListener {
                 val address = email.text.toString().trim()
                 val secret = password.text.toString()

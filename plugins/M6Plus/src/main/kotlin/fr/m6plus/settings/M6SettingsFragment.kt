@@ -39,10 +39,11 @@ class M6SettingsFragment : DialogFragment() {
             isSingleLine = true
             isSaveEnabled = false
         }
+        markCredentialFields(email, password)
         layout.addView(status)
         layout.addView(email)
         layout.addView(password)
-        layout.addView(Button(context).apply {
+        val diagnostics = Button(context).apply {
             text = "Plugin diagnostics"
             setOnClickListener {
                 val report = M6Diagnostics.report()
@@ -52,7 +53,8 @@ class M6SettingsFragment : DialogFragment() {
                     .setNegativeButton("Clear") { _, _ -> M6Diagnostics.clear() }
                     .show()
             }
-        })
+        }
+        layout.addView(diagnostics)
         val dialog = AlertDialog.Builder(context)
             .setTitle("M6+")
             .setView(layout)
@@ -64,6 +66,7 @@ class M6SettingsFragment : DialogFragment() {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             val connect = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val disconnect = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            chainFormFocus(email, password, diagnostics, connect)
             connect.setOnClickListener {
                 val login = email.text.toString().trim()
                 val secret = password.text.toString()

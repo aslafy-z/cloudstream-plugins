@@ -101,10 +101,11 @@ class TF1SettingsFragment : DialogFragment() {
             isSingleLine = true
             isSaveEnabled = false
         }
+        markCredentialFields(email, password)
         layout.addView(status)
         layout.addView(email)
         layout.addView(password)
-        layout.addView(Button(context).apply {
+        val diagnostics = Button(context).apply {
             text = "Plugin diagnostics"
             setOnClickListener {
                 val report = TF1Diagnostics.report()
@@ -114,7 +115,8 @@ class TF1SettingsFragment : DialogFragment() {
                     .setNegativeButton("Clear") { _, _ -> TF1Diagnostics.clear() }
                     .show()
             }
-        })
+        }
+        layout.addView(diagnostics)
         val dialog = AlertDialog.Builder(context).setTitle("TF1+").setView(layout)
             .setPositiveButton("Sign in", null)
             .setNeutralButton("Sign out", null)
@@ -124,6 +126,7 @@ class TF1SettingsFragment : DialogFragment() {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             val connect = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val disconnect = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            chainFormFocus(email, password, diagnostics, connect)
             connect.setOnClickListener {
                 val address = email.text.toString().trim()
                 val secret = password.text.toString()
