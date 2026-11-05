@@ -50,8 +50,8 @@ jobs:
             if [ "$attempt" -eq 1 ]; then refresh=""; else refresh="--refresh-dependencies"; fi
             if ./gradlew --no-daemon $refresh help; then exit 0; fi
             if [ "$attempt" -lt 3 ]; then
-              echo "::warning::Gradle configuration failed (attempt $attempt of 3), retrying in 60s"
-              sleep 60
+              echo "::warning::Gradle configuration failed (attempt $attempt of 3), retrying in 30s"
+              sleep 30
             fi
           done
           exit 1
