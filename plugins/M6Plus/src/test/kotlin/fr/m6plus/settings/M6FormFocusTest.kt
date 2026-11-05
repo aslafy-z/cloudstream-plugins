@@ -77,14 +77,13 @@ class M6FormFocusTest {
         assertEquals(listOf(android.view.View.AUTOFILL_HINT_PASSWORD), password.autofillHints!!.toList())
     }
 
-    @Test fun `password stays masked when built like the settings dialog`() {
+    @Test fun `password stays readable when built like the settings dialog`() {
         val field = EditText(email.context).apply {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             isSingleLine = true
         }
-        assertTrue(field.transformationMethod !is android.text.method.PasswordTransformationMethod)
         markCredentialFields(email, field)
-        assertTrue(field.transformationMethod is android.text.method.PasswordTransformationMethod)
+        assertTrue(field.transformationMethod !is android.text.method.PasswordTransformationMethod)
     }
 
     @Test fun `explicit order covers the buttons`() {

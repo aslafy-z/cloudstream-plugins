@@ -1,7 +1,6 @@
 package fr.m6plus.settings
 
 import android.os.Build
-import android.text.method.PasswordTransformationMethod
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -12,8 +11,8 @@ import android.widget.EditText
  * offer an email in the email field and a password in the password field.
  */
 internal fun markCredentialFields(email: EditText, password: EditText) {
-    // isSingleLine replaces the password mask set by inputType, so the password showed in clear.
-    password.transformationMethod = PasswordTransformationMethod.getInstance()
+    // The password stays readable on purpose, to check it while typing with a TV remote.
+    // (isSingleLine, set after the password inputType, already replaces the mask.)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         email.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS, View.AUTOFILL_HINT_USERNAME)
         password.setAutofillHints(View.AUTOFILL_HINT_PASSWORD)
